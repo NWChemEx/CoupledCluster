@@ -2,5 +2,5 @@
 #include <simde/types.hpp>
 
 namespace tamm_sde::type {
-    using namespace simde::type;
+using namespace simde::type;
 }

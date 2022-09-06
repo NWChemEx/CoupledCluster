@@ -1,9 +1,9 @@
 #pragma once
 
-#include "diis.hpp"
 #include "ccsd_util.hpp"
-#include "ga/macdecls.h"
+#include "diis.hpp"
 #include "ga/ga-mpi.h"
+#include "ga/macdecls.h"
 
 using namespace tamm;
 
