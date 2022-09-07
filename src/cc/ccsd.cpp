@@ -144,7 +144,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   const auto& C_virt_ta = a.C();
 
   Matrix f_ao_eig   = tensor_wrapper_to_eigen(f_wrapper);
-  Matrix C_occ_eig  = tensor_wrapper_to_eigen(C_occ_ta); 
+  Matrix C_occ_eig  = tensor_wrapper_to_eigen(C_occ_ta);
   Matrix C_virt_eig = tensor_wrapper_to_eigen(C_virt_ta);
 
   auto              nwx_shells     = bra.basis_set().occupied_orbitals().from_space().basis_set();
