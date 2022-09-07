@@ -4,13 +4,7 @@
 
 using TensorType = double;
 
-size_t nbasis(const std::vector<libint2::Shell>& shells) {
-  size_t n = 0;
-  for(const auto& shell: shells) n += shell.size();
-  return n;
-}
-
-std::vector<size_t> map_shell_to_basis_function(const std::vector<libint2::Shell>& shells) {
+std::vector<size_t> map_shell_to_basis_function(const libint2::BasisSet& shells) {
   std::vector<size_t> result;
   result.reserve(shells.size());
 
@@ -23,8 +17,8 @@ std::vector<size_t> map_shell_to_basis_function(const std::vector<libint2::Shell
   return result;
 }
 
-std::vector<size_t> map_basis_function_to_shell(const std::vector<libint2::Shell>& shells) {
-  std::vector<size_t> result(nbasis(shells));
+std::vector<size_t> map_basis_function_to_shell(const libint2::BasisSet& shells) {
+  std::vector<size_t> result(shells.nbf());
 
   auto shell2bf = map_shell_to_basis_function(shells);
   for(size_t s1 = 0; s1 != shells.size(); ++s1) {

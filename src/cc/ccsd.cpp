@@ -143,9 +143,9 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   const auto& C_occ_ta  = i.C();
   const auto& C_virt_ta = a.C();
 
-  Matrix f_ao_eig   = TA::array_to_eigen(f_wrapper.template get<TA::TSpArrayD>());
-  Matrix C_occ_eig  = TA::array_to_eigen(C_occ_ta.template get<TA::TSpArrayD>());
-  Matrix C_virt_eig = TA::array_to_eigen(C_virt_ta.template get<TA::TSpArrayD>());
+  Matrix f_ao_eig   = tensor_wrapper_to_eigen(f_wrapper);
+  Matrix C_occ_eig  = tensor_wrapper_to_eigen(C_occ_ta); 
+  Matrix C_virt_eig = tensor_wrapper_to_eigen(C_virt_ta);
 
   auto              nwx_shells     = bra.basis_set().occupied_orbitals().from_space().basis_set();
   auto              nbf            = nwx_shells.n_aos();
