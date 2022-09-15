@@ -7,7 +7,7 @@ namespace ccsd {
 
 using f_pt   = simde::Fock;
 using eri_pt = simde::TransformedERI4;
-using te_pt  = simde::TotalCanonicalEnergy;
+using ee_pt  = simde::CanonicalElectronicEnergy;
 
 using ce_pt =
   simde::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
@@ -80,7 +80,7 @@ TEMPLATED_MODULE_CTOR(CCSD, T) {
 
   add_submodule<f_pt>("Fock Builder");
   add_submodule<eri_pt>("Transformed ERIs");
-  add_submodule<te_pt>("Total Energy");
+  add_submodule<ee_pt>("Electronic Energy");
 
   add_input<bool>("debug").set_default(false).set_description("Debugging flag");
 
@@ -157,7 +157,7 @@ template<typename T>
 TEMPLATED_MODULE_RUN(CCSD, T) {
   using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
-  const auto& [bra, H_hat, ket] = ce_pt::unwrap_inputs(inputs);
+  const auto& [bra, H_e, ket] = ce_pt::unwrap_inputs(inputs);
   const auto& i                 = bra.basis_set().occupied_orbitals();
   const auto& a                 = bra.basis_set().virtual_orbitals();
 
@@ -168,16 +168,15 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   const auto& f_hat       = bra.basis_set().fock_operator();
   const auto& [f_wrapper] = f_mod.run_as<f_pt>(bra_aos, f_hat, bra_aos);
 
-  simde::type::els_hamiltonian H_e(H_hat);
-  auto&                        te_mod = submods.at("Total Energy");
-  auto [scf_energy]                   = te_mod.run_as<te_pt>(bra, H_hat, ket);
+  auto&                        ee_mod = submods.at("Electronic Energy");
+  auto [scf_energy]                   = ee_mod.run_as<ee_pt>(bra, H_e, ket);
 
-  const auto& C_occ_ta  = i.C();
-  const auto& C_virt_ta = a.C();
+  const auto& C_occ  = i.C();
+  const auto& C_virt = a.C();
 
   Matrix f_ao_eig   = tensor_wrapper_to_eigen(f_wrapper);
-  Matrix C_occ_eig  = tensor_wrapper_to_eigen(C_occ_ta);
-  Matrix C_virt_eig = tensor_wrapper_to_eigen(C_virt_ta);
+  Matrix C_occ_eig  = tensor_wrapper_to_eigen(C_occ);
+  Matrix C_virt_eig = tensor_wrapper_to_eigen(C_virt);
 
   auto              nwx_shells     = bra.basis_set().occupied_orbitals().from_space().basis_set();
   auto              nbf            = nwx_shells.n_aos();
