@@ -7,35 +7,67 @@ namespace ccsd {
 
 using f_pt   = simde::Fock;
 using eri_pt = simde::TransformedERI4;
-using ee_pt  = simde::CanonicalElectronicEnergy;
+using te_pt  = simde::TotalCanonicalEnergy;
 
 using ce_pt =
   simde::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
 
-template<typename T>
-libint2::BasisSet ccsd_make_basis(const chemist::AOBasisSet<T>& bs) {
-  using coord_type  = std::array<double, 3>;
-  using Contraction = libint2::Shell::Contraction;
-  libint2::BasisSet shells;
+inline libint2::BasisSet ccsd_make_basis(const simde::type::ao_basis_set& bs) {
+    /// Typedefs for everything
+    using atom_t          = libint2::Atom;
+    using shell_t         = libint2::Shell;
+    using basis_t         = libint2::BasisSet;
+    using cont_t          = libint2::Shell::Contraction;
+    using svec_d_t        = libint2::svector<double>;
+    using conts_t         = libint2::svector<cont_t>;
+    using centers_t       = std::vector<atom_t>;
+    using atom_bases_t    = std::vector<shell_t>;
+    using element_bases_t = std::vector<atom_bases_t>;
 
-  for(const auto&& shelli: bs.shells()) {
-    const auto nprims     = shelli.n_unique_primitives();
-    const auto first_prim = shelli.unique_primitive(0);
-    const auto last_prim  = shelli.unique_primitive(nprims - 1);
-    const int  l          = shelli.l();
-    const bool pure       = shelli.pure() == chemist::ShellType::pure;
+    /// Inputs for BasisSet constructor
+    centers_t centers{};
+    element_bases_t element_bases{};
 
-    coord_type center = {shelli.x(), shelli.y(), shelli.z()};
+    /// Atom doesn't have a value ctor, so here's a stand in
+    auto atom_ctor = [](int Z, double x, double y, double z) {
+        atom_t atom{};
+        atom.atomic_number = Z;
+        atom.x             = x;
+        atom.y             = y;
+        atom.z             = z;
+        return atom;
+    };
 
-    libint2::svector<double> alphas(&first_prim.exponent(), &last_prim.exponent() + 1);
-    libint2::svector<double> coefs(&first_prim.coefficient(), &last_prim.coefficient() + 1);
+    /// Origin for shell construction
+    std::array<double, 3> origin = {0.0, 0.0, 0.0};
 
-    Contraction                   cont({l, pure, coefs});
-    libint2::svector<Contraction> conts{cont};
-    shells.push_back(libint2::Shell(alphas, conts, center));
-  }
+    /// Convert centers and their shells to libint equivalents.
+    for(auto center_i = 0; center_i < bs.size(); ++center_i) {
+        /// Add current center to atoms list
+        auto& center = bs[center_i];
+        centers.push_back(
+          atom_ctor(center_i, center.x(), center.y(), center.z()));
 
-  return shells;
+        /// Gather shells for this center and add them to element_bases
+        atom_bases_t atom_bases{};
+        for(const auto&& shelli : center) {
+            const auto nprims = shelli.n_unique_primitives();
+            const auto prim0  = shelli.unique_primitive(0);
+            const auto primN  = shelli.unique_primitive(nprims - 1);
+            const bool pure   = shelli.pure() == chemist::ShellType::pure;
+            const int l       = shelli.l();
+
+            svec_d_t alphas(&prim0.exponent(), &primN.exponent() + 1);
+            svec_d_t coefs(&prim0.coefficient(), &primN.coefficient() + 1);
+            conts_t conts{cont_t{l, pure, coefs}};
+            /// Use origin for position, because BasisSet moves shells to center
+            atom_bases.push_back(shell_t(alphas, conts, origin));
+        }
+        element_bases.push_back(atom_bases);
+    }
+
+    /// Return the new basis set
+    return basis_t(centers, element_bases);
 }
 
 // DECLARE_MODULE(CCSD);
@@ -48,7 +80,7 @@ TEMPLATED_MODULE_CTOR(CCSD, T) {
 
   add_submodule<f_pt>("Fock Builder");
   add_submodule<eri_pt>("Transformed ERIs");
-  add_submodule<ee_pt>("Electronic Energy");
+  add_submodule<te_pt>("Total Energy");
 
   add_input<bool>("debug").set_default(false).set_description("Debugging flag");
 
@@ -137,8 +169,8 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   const auto& [f_wrapper] = f_mod.run_as<f_pt>(bra_aos, f_hat, bra_aos);
 
   simde::type::els_hamiltonian H_e(H_hat);
-  auto&                        ee_mod = submods.at("Electronic Energy");
-  auto [scf_energy]                   = ee_mod.run_as<ee_pt>(bra, H_e, ket);
+  auto&                        te_mod = submods.at("Total Energy");
+  auto [scf_energy]                   = te_mod.run_as<te_pt>(bra, H_hat, ket);
 
   const auto& C_occ_ta  = i.C();
   const auto& C_virt_ta = a.C();
@@ -151,7 +183,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   auto              nbf            = nwx_shells.n_aos();
   const std::string basis_set_name = nwx_shells[0].basis_set_name();
 
-  libint2::BasisSet li_shells = ccsd_make_basis<double>(nwx_shells);
+  libint2::BasisSet li_shells = ccsd_make_basis(nwx_shells);
 
   // Setup system data
   OptionsMap options_map;
