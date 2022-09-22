@@ -5,8 +5,6 @@
 
 #include "libint2_includes.hpp"
 
-#include <fmt/fmt.h>
-
 struct BasisFunctionCount {
   int s_count=0;
   int p_count=0;
@@ -71,8 +69,8 @@ struct BasisFunctionCount {
   }
 
   void print() {
-    fmt::print("s = {}, p = {}, d = {}, f = {}, g = {}, h = {}\n", s_count,p_count,d_count,f_count,g_count,h_count);
-    fmt::print("sp = {}, spd= {}, spdf = {}, spdfg = {}, spdfgh = {}\n", sp_count,spd_count,spdf_count,spdfg_count,spdfgh_count);
+    std::cout << "s = " << s_count << ", p = " << p_count << ", d = " << d_count << ", f = " << f_count << ", g = " << g_count << ", h = " << h_count << std::endl;
+    std::cout << "sp = " << sp_count << ", spd = " << spd_count << ", spdf = " << spdf_count << ", spdfg = " << spdfg_count << ", spdfgh = " << spdfgh_count << std::endl;
   }
 
 };
