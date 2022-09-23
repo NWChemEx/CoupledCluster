@@ -1,31 +1,39 @@
 #pragma once
-// #include <simde/correlation_energy.hpp>
 #include "tamm/tamm.hpp"
-#include <simde/simde.hpp>
+#include "simde/simde.hpp"
 
 namespace coupledcluster {
 
-using BaseType =
-  simde::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
+template<typename BraType, typename OpType, typename KetType>
+DECLARE_TEMPLATED_PROPERTY_TYPE(BraKet, BraType, OpType, KetType);
 
-template<typename ElementType>
-DECLARE_DERIVED_TEMPLATED_PROPERTY_TYPE(CCSDResults, BaseType, ElementType);
+template<typename BraType, typename OpType, typename KetType>
+TEMPLATED_PROPERTY_TYPE_INPUTS(BraKet, BraType, OpType, KetType) {
+    using op_t = const OpType&;
 
-template<typename ElementType>
-TEMPLATED_PROPERTY_TYPE_INPUTS(CCSDResults, ElementType) {
-  auto rv = pluginplay::declare_input();
-  return rv;
+    auto rv = pluginplay::declare_input()
+                .add_field<const BraType&>("Bra")
+                .template add_field<op_t>("Operator")
+                .template add_field<const KetType&>("Ket");
+    return rv;
 }
 
-template<typename ElementType>
-TEMPLATED_PROPERTY_TYPE_RESULTS(CCSDResults, ElementType) {
-  using tensor_type = tamm::Tensor<ElementType>;
-
-  auto rv = pluginplay::declare_result()
-              .add_field<tensor_type>("Fock MO")
-              .template add_field<tensor_type>("t1 amplitude")
-              .template add_field<tensor_type>("t2 amplitude");
-  return rv;
+template<typename BraType, typename OpType, typename KetType>
+TEMPLATED_PROPERTY_TYPE_RESULTS(BraKet, BraType, OpType, KetType) {
+    auto rv = pluginplay::declare_result()
+                    .add_field<tamm::Tensor<double>>("Fock MO")
+                    .template add_field<tamm::Tensor<double>>("T1 amplitude")
+                    .template add_field<tamm::Tensor<double>>("T2 amplitude");
+    return rv;
 }
+
+template<typename BraType, typename KetType>
+using CorrelationEnergy = BraKet<BraType, simde::type::els_hamiltonian, KetType>;
+
+template<typename BraType>
+using ElectronicEnergy = BraKet<BraType, simde::type::els_hamiltonian, BraType>;
+
+template<typename BraType>
+using TotalEnergy = BraKet<BraType, simde::type::hamiltonian, BraType>;
 
 } // namespace coupledcluster

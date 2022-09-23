@@ -3,6 +3,8 @@
 #include <libint2.hpp>
 #include <simde/simde.hpp>
 #include "ccsd_t/ccsd_t_fused_driver.hpp"
+#include "cc/property_types.hpp"
+
 
 namespace ccsd {
 
@@ -12,6 +14,9 @@ using ee_pt  = simde::CanonicalElectronicEnergy;
 
 using ce_pt =
   simde::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
+
+using ccsd_pt =
+  coupledcluster::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
 
 inline libint2::BasisSet ccsd_make_basis(const simde::type::ao_basis_set& bs) {
     /// Typedefs for everything
@@ -77,6 +82,7 @@ template<typename T>
 TEMPLATED_MODULE_CTOR(CCSD, T) {
   description("Computes CCSD correlation energy");
   satisfies_property_type<ce_pt>();
+  satisfies_property_type<ccsd_pt>();
   satisfies_property_type<simde::TotalCanonicalEnergy>();
 
   add_submodule<f_pt>("Fock Builder");
@@ -151,9 +157,6 @@ TEMPLATED_MODULE_CTOR(CCSD, T) {
     .set_default(true)
     .set_description("Compute and write data needed for (T) calculation to disk");
 
-  add_result<tamm::Tensor<T>>("MO Fock Matrix").set_description("Fock matrix in MO");
-  add_result<tamm::Tensor<T>>("T1 amplitude").set_description("T1 amplitude");
-  add_result<tamm::Tensor<T>>("T2 amplitude").set_description("T2 amplitude");
   // add_result<SystemData>("CCSD System Data").set_description("CCSD System Data");
 }
 
@@ -690,9 +693,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
 
   auto rv = results();
   rv      = ce_pt::wrap_results(rv, corr_energy);
-  rv.at("MO Fock Matrix").change(d_f1);
-  rv.at("T1 amplitude").change(d_t1);
-  rv.at("T2 amplitude").change(d_t2);
+  rv      = ccsd_pt::wrap_results(rv, d_f1, d_t1, d_t2);
   // rv.at("CCSD System Data").change(sys_data);
   return rv;
 }
