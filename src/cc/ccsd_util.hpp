@@ -391,8 +391,8 @@ void ccsd_stats(ExecutionContext& ec, double hf_energy, double residual, double 
       std::cout.precision(15);
       std::cout << " CCSD correlation energy / hartree =" << std::setw(26) << std::right << energy
                 << std::endl;
-      std::cout << " CCSD total energy / hartree       =" << std::setw(26) << std::right
-                << energy + hf_energy << std::endl;
+      // std::cout << " CCSD total energy / hartree       =" << std::setw(26) << std::right
+      //           << energy + hf_energy << std::endl;
     }
   }
   if(!ccsd_conv) {
