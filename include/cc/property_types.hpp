@@ -36,4 +36,27 @@ using ElectronicEnergy = BraKet<BraType, simde::type::els_hamiltonian, BraType>;
 template<typename BraType>
 using TotalEnergy = BraKet<BraType, simde::type::hamiltonian, BraType>;
 
+
+// CCSD_T
+
+template<typename T>
+DECLARE_TEMPLATED_PROPERTY_TYPE(CCSD_T_PT, T);
+
+template<typename T>
+TEMPLATED_PROPERTY_TYPE_INPUTS(CCSD_T_PT, T) {
+
+    auto rv = pluginplay::declare_input()
+              .add_field<tamm::Tensor<T>>("Fock MO")
+              .template add_field<tamm::Tensor<T>>("T1 amplitude")
+              .template add_field<tamm::Tensor<T>>("T2 amplitude");
+    return rv;
+}
+
+template<typename T>
+TEMPLATED_PROPERTY_TYPE_RESULTS(CCSD_T_PT, T) {
+    auto rv = pluginplay::declare_result()
+                    .add_field<T>("Energy");
+    return rv;
+}
+
 } // namespace coupledcluster
