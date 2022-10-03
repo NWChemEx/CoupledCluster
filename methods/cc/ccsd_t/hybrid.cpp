@@ -17,7 +17,7 @@
 #endif
 
 //
-int util_my_smp_index(){
+int util_my_smp_index() {
 #ifdef USE_UPCXX
   int ppn = upcxx::local_team().rank_n();
   return upcxx::rank_me() % ppn;

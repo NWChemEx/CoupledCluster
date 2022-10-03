@@ -129,12 +129,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   //
   int rng_h3, rng_h2, rng_h1, rng_p6, rng_p5, rng_p4;
   int energy_rng_h3, energy_rng_h2, energy_rng_h1, energy_rng_p6, energy_rng_p5, energy_rng_p4;
-  energy_rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-  energy_rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-  energy_rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-  energy_rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-  energy_rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-  energy_rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+  energy_rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+                    ? FUSION_SIZE_SLICE_1_H3
+                    : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+  energy_rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+                    ? FUSION_SIZE_SLICE_1_H2
+                    : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+  energy_rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+                    ? FUSION_SIZE_SLICE_1_H1
+                    : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+  energy_rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+                    ? FUSION_SIZE_SLICE_1_P6
+                    : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+  energy_rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+                    ? FUSION_SIZE_SLICE_1_P5
+                    : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+  energy_rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+                    ? FUSION_SIZE_SLICE_1_P4
+                    : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
   //
   T temp_av;
@@ -212,12 +224,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //  sd1_1
     if(flag_d1_1 >= 0) {
@@ -448,12 +472,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //        sd2_7
     if(flag_d2_7 >= 0) {
@@ -904,12 +940,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //        sd1_4
     if(flag_d1_4 >= 0) {
@@ -1325,12 +1373,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //  sd2_1
     if(flag_d2_1 >= 0) {
@@ -1744,12 +1804,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //  (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //  flags
     int flag_s1_1 = const_df_s1_exec[0];
@@ -2572,7 +2644,7 @@ __constant__ int const_d1_h7b[MAX_NOAB];
 __constant__ int const_d2_p7b[MAX_NVAB];
 
 //------------------------------------------------------------------------------ device helper
-//fuctions
+// fuctions
 __device__ inline void zero_shared(double* smem, const int start_row, const int num_rows) {
   const int t_id    = threadIdx.y * blockDim.x + threadIdx.x;
   const int col_idx = t_id % 64;
@@ -2615,20 +2687,19 @@ __device__ inline void rt_load_fixed(double* smem, const int idx_x_1, const int 
 
 //------------------------------------------------------------------------------
 // created by tc_gen_code_Kernel()
-template <typename T>
+template<typename T>
 __global__ __launch_bounds__(256, 3) void fully_fused_kernel_ccsd_t_nvidia_tc_fp64(
   int size_noab, int size_nvab,
   // common
   int size_max_dim_s1_t1, int size_max_dim_s1_v2, int size_max_dim_d1_t2, int size_max_dim_d1_v2,
   int size_max_dim_d2_t2, int size_max_dim_d2_v2,
   //
-  T* __restrict__ dev_s1_t1_all, T* __restrict__ dev_s1_v2_all,
-  T* __restrict__ dev_d1_t2_all, T* __restrict__ dev_d1_v2_all,
-  T* __restrict__ dev_d2_t2_all, T* __restrict__ dev_d2_v2_all,
+  T* __restrict__ dev_s1_t1_all, T* __restrict__ dev_s1_v2_all, T* __restrict__ dev_d1_t2_all,
+  T* __restrict__ dev_d1_v2_all, T* __restrict__ dev_d2_t2_all, T* __restrict__ dev_d2_v2_all,
   //
   T* dev_energy, const T* dev_evl_sorted_h3b, const T* dev_evl_sorted_h2b,
-  const T* dev_evl_sorted_h1b, const T* dev_evl_sorted_p6b,
-  const T* dev_evl_sorted_p5b, const T* dev_evl_sorted_p4b,
+  const T* dev_evl_sorted_h1b, const T* dev_evl_sorted_p6b, const T* dev_evl_sorted_p5b,
+  const T* dev_evl_sorted_p4b,
   //
   const int size_h3, const int size_h2, const int size_h1, const int size_p6, const int size_p5,
   const int size_p4, const int numBlk_h3, const int numBlk_h2, const int numBlk_h1,
@@ -2636,7 +2707,7 @@ __global__ __launch_bounds__(256, 3) void fully_fused_kernel_ccsd_t_nvidia_tc_fp
   auto grid  = cooperative_groups::this_grid();
   auto block = cooperative_groups::this_thread_block();
   // For Shared Memory,
-  const int                lda = 16 + PAD;
+  const int           lda = 16 + PAD;
   extern __shared__ T sm_block[];
   T*                  sm_a = reinterpret_cast<T*>(sm_block) + 0 * STAGE_OFFSET;
   T*                  sm_b = reinterpret_cast<T*>(sm_block) + NUM_STAGE * STAGE_OFFSET;
@@ -2691,12 +2762,18 @@ __global__ __launch_bounds__(256, 3) void fully_fused_kernel_ccsd_t_nvidia_tc_fp
 
   // need to support partial tiles
   int rng_h3, rng_h2, rng_h1, rng_p6, rng_p5, rng_p4;
-  rng_h3 = ((size_h3 - (blk_idx_h3 * SIZE_TILE_H3)) >= SIZE_TILE_H3) ? SIZE_TILE_H3 : (size_h3 % SIZE_TILE_H3);
-  rng_h2 = ((size_h2 - (blk_idx_h2 * SIZE_TILE_H2)) >= SIZE_TILE_H2) ? SIZE_TILE_H2 : (size_h2 % SIZE_TILE_H2);
-  rng_h1 = ((size_h1 - (blk_idx_h1 * SIZE_TILE_H1)) >= SIZE_TILE_H1) ? SIZE_TILE_H1 : (size_h1 % SIZE_TILE_H1);
-  rng_p6 = ((size_p6 - (blk_idx_p6 * SIZE_TILE_P6)) >= SIZE_TILE_P6) ? SIZE_TILE_P6 : (size_p6 % SIZE_TILE_P6);
-  rng_p5 = ((size_p5 - (blk_idx_p5 * SIZE_TILE_P5)) >= SIZE_TILE_P5) ? SIZE_TILE_P5 : (size_p5 % SIZE_TILE_P5);
-  rng_p4 = ((size_p4 - (blk_idx_p4 * SIZE_TILE_P4)) >= SIZE_TILE_P4) ? SIZE_TILE_P4 : (size_p4 % SIZE_TILE_P4);
+  rng_h3 = ((size_h3 - (blk_idx_h3 * SIZE_TILE_H3)) >= SIZE_TILE_H3) ? SIZE_TILE_H3
+                                                                     : (size_h3 % SIZE_TILE_H3);
+  rng_h2 = ((size_h2 - (blk_idx_h2 * SIZE_TILE_H2)) >= SIZE_TILE_H2) ? SIZE_TILE_H2
+                                                                     : (size_h2 % SIZE_TILE_H2);
+  rng_h1 = ((size_h1 - (blk_idx_h1 * SIZE_TILE_H1)) >= SIZE_TILE_H1) ? SIZE_TILE_H1
+                                                                     : (size_h1 % SIZE_TILE_H1);
+  rng_p6 = ((size_p6 - (blk_idx_p6 * SIZE_TILE_P6)) >= SIZE_TILE_P6) ? SIZE_TILE_P6
+                                                                     : (size_p6 % SIZE_TILE_P6);
+  rng_p5 = ((size_p5 - (blk_idx_p5 * SIZE_TILE_P5)) >= SIZE_TILE_P5) ? SIZE_TILE_P5
+                                                                     : (size_p5 % SIZE_TILE_P5);
+  rng_p4 = ((size_p4 - (blk_idx_p4 * SIZE_TILE_P4)) >= SIZE_TILE_P4) ? SIZE_TILE_P4
+                                                                     : (size_p4 % SIZE_TILE_P4);
 
   //
   // const size_t num_batches = (size_internal + SIZE_UNIT_INT - 1) / SIZE_UNIT_INT;
@@ -4990,8 +5067,8 @@ __global__ __launch_bounds__(256, 3) void fully_fused_kernel_ccsd_t_nvidia_tc_fp
             temp * (op_c.reg[idx_reg_y * 4 + idx_reg_x] + op_c_s.reg[idx_reg_y * 4 + idx_reg_x]);
 #else
           T inner_factor = partial_inner_factor -
-                                dev_evl_sorted_p5b[blk_idx_p5 * SIZE_TILE_P5 + idx_reg_x] -
-                                dev_evl_sorted_p6b[blk_idx_p6 * SIZE_TILE_P6 + idx_reg_y];
+                           dev_evl_sorted_p5b[blk_idx_p5 * SIZE_TILE_P5 + idx_reg_x] -
+                           dev_evl_sorted_p6b[blk_idx_p6 * SIZE_TILE_P6 + idx_reg_y];
           energy_1 += op_c.reg[idx_reg_y * 4 + idx_reg_x] * op_c.reg[idx_reg_y * 4 + idx_reg_x] /
                       inner_factor;
           energy_2 +=
@@ -5048,13 +5125,13 @@ __global__ __launch_bounds__(256, 3) void fully_fused_kernel_ccsd_t_nvidia_tc_fp
 /**
  *      @brief the driver of the fully-fused kernel for CCSD(T)
  **/
-template <typename T>
+template<typename T>
 void ccsd_t_fully_fused_nvidia_tc_fp64(
   gpuStream_t& stream_id, size_t numBlks, size_t size_h3, size_t size_h2, size_t size_h1,
   size_t size_p6, size_t size_p5, size_t size_p4,
   //
-  T* dev_s1_t1_all, T* dev_s1_v2_all, T* dev_d1_t2_all, T* dev_d1_v2_all,
-  T* dev_d2_t2_all, T* dev_d2_v2_all,
+  T* dev_s1_t1_all, T* dev_s1_v2_all, T* dev_d1_t2_all, T* dev_d1_v2_all, T* dev_d2_t2_all,
+  T* dev_d2_v2_all,
   //
   int* host_size_d1_h7b, int* host_size_d2_p7b, int* host_exec_s1, int* host_exec_d1,
   int* host_exec_d2,
@@ -5064,8 +5141,7 @@ void ccsd_t_fully_fused_nvidia_tc_fp64(
   size_t size_max_dim_d2_v2,
   //
   T factor, T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
-  T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
-  T* dev_energies) {
+  T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b, T* dev_energies) {
   //
   //    constant memories
   //
@@ -5123,21 +5199,21 @@ void ccsd_t_fully_fused_nvidia_tc_fp64(
   // int maxbytes = 135168; // 132 KB
   // CUCHK(cudaFuncSetAttribute(fused_kernel_d2, cudaFuncAttributeMaxDynamicSharedMemorySize,
   // maxbytes));
-  fully_fused_kernel_ccsd_t_nvidia_tc_fp64<T><<<gridsize_1, blocksize_1,
-                                             2 * NUM_STAGE * 8 * STAGE_OFFSET, stream_id>>>(
-    (int) size_noab, (int) size_nvab,
-    //
-    (int) size_max_dim_s1_t1, (int) size_max_dim_s1_v2, (int) size_max_dim_d1_t2,
-    (int) size_max_dim_d1_v2, (int) size_max_dim_d2_t2, (int) size_max_dim_d2_v2,
-    //
-    dev_s1_t1_all, dev_s1_v2_all, dev_d1_t2_all, dev_d1_v2_all, dev_d2_t2_all, dev_d2_v2_all,
-    //
-    dev_energies, dev_evl_sorted_h3b, dev_evl_sorted_h2b, dev_evl_sorted_h1b, dev_evl_sorted_p6b,
-    dev_evl_sorted_p5b, dev_evl_sorted_p4b,
-    //
-    (int) size_h3, (int) size_h2, (int) size_h1, (int) size_p6, (int) size_p5, (int) size_p4,
-    CEIL(size_h3, SIZE_TILE_H3), CEIL(size_h2, SIZE_TILE_H2), CEIL(size_h1, SIZE_TILE_H1),
-    CEIL(size_p6, SIZE_TILE_P6), CEIL(size_p5, SIZE_TILE_P5), CEIL(size_p4, SIZE_TILE_P4));
+  fully_fused_kernel_ccsd_t_nvidia_tc_fp64<T>
+    <<<gridsize_1, blocksize_1, 2 * NUM_STAGE * 8 * STAGE_OFFSET, stream_id>>>(
+      (int) size_noab, (int) size_nvab,
+      //
+      (int) size_max_dim_s1_t1, (int) size_max_dim_s1_v2, (int) size_max_dim_d1_t2,
+      (int) size_max_dim_d1_v2, (int) size_max_dim_d2_t2, (int) size_max_dim_d2_v2,
+      //
+      dev_s1_t1_all, dev_s1_v2_all, dev_d1_t2_all, dev_d1_v2_all, dev_d2_t2_all, dev_d2_v2_all,
+      //
+      dev_energies, dev_evl_sorted_h3b, dev_evl_sorted_h2b, dev_evl_sorted_h1b, dev_evl_sorted_p6b,
+      dev_evl_sorted_p5b, dev_evl_sorted_p4b,
+      //
+      (int) size_h3, (int) size_h2, (int) size_h1, (int) size_p6, (int) size_p5, (int) size_p4,
+      CEIL(size_h3, SIZE_TILE_H3), CEIL(size_h2, SIZE_TILE_H2), CEIL(size_h1, SIZE_TILE_H1),
+      CEIL(size_p6, SIZE_TILE_P6), CEIL(size_p5, SIZE_TILE_P5), CEIL(size_p4, SIZE_TILE_P4));
   CUCHK(cudaGetLastError());
 
 #ifdef DEBUG_PRINT_KERNEL_TIME
@@ -5159,8 +5235,7 @@ void ccsd_t_fully_fused_nvidia_tc_fp64(
 // end of (2) 3rd. Generation Tensor Cores (FP64)
 
 // explicit template instantiation
-template
-void ccsd_t_fully_fused_nvidia_tc_fp64<double>(
+template void ccsd_t_fully_fused_nvidia_tc_fp64<double>(
   gpuStream_t& stream_id, size_t numBlks, size_t size_h3, size_t size_h2, size_t size_h1,
   size_t size_p6, size_t size_p5, size_t size_p4,
   //
@@ -5178,24 +5253,21 @@ void ccsd_t_fully_fused_nvidia_tc_fp64<double>(
   double* dev_evl_sorted_p4b, double* dev_evl_sorted_p5b, double* dev_evl_sorted_p6b,
   double* dev_energies);
 
-#endif //USE_NV_TC
+#endif // USE_NV_TC
 
-template
-void fully_fused_ccsd_t_gpu<double>(
-  gpuStream_t& stream_id, size_t num_blocks, size_t base_size_h1b,
-  size_t base_size_h2b, size_t base_size_h3b, size_t base_size_p4b,
-  size_t base_size_p5b, size_t base_size_p6b,
+template void fully_fused_ccsd_t_gpu<double>(
+  gpuStream_t& stream_id, size_t num_blocks, size_t base_size_h1b, size_t base_size_h2b,
+  size_t base_size_h3b, size_t base_size_p4b, size_t base_size_p5b, size_t base_size_p6b,
   //
   double* df_dev_d1_t2_all, double* df_dev_d1_v2_all, double* df_dev_d2_t2_all,
   double* df_dev_d2_v2_all, double* df_dev_s1_t1_all, double* df_dev_s1_v2_all,
   //
   int* host_d1_size, int* host_d1_exec, // used
-  int* host_d2_size, int* host_d2_exec, int* host_s1_size,
-  int* host_s1_exec,
+  int* host_d2_size, int* host_d2_exec, int* host_s1_size, int* host_s1_exec,
   //
-  size_t size_noab, size_t size_max_dim_d1_t2, size_t size_max_dim_d1_v2,
-  size_t size_nvab, size_t size_max_dim_d2_t2, size_t size_max_dim_d2_v2,
-  size_t size_max_dim_s1_t1, size_t size_max_dim_s1_v2,
+  size_t size_noab, size_t size_max_dim_d1_t2, size_t size_max_dim_d1_v2, size_t size_nvab,
+  size_t size_max_dim_d2_t2, size_t size_max_dim_d2_v2, size_t size_max_dim_s1_t1,
+  size_t size_max_dim_s1_v2,
   //
   double factor,
   //

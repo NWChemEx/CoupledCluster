@@ -84,11 +84,13 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   int size_max_dim_s1_t1, int size_max_dim_s1_v2, int size_max_dim_d1_t2, int size_max_dim_d1_v2,
   int size_max_dim_d2_t2, int size_max_dim_d2_v2,
   //
-  T* __restrict__ df_dev_d1_t2_all, T* __restrict__ df_dev_d1_v2_all, T* __restrict__ df_dev_d2_t2_all, T* __restrict__ df_dev_d2_v2_all,
+  T* __restrict__ df_dev_d1_t2_all, T* __restrict__ df_dev_d1_v2_all,
+  T* __restrict__ df_dev_d2_t2_all, T* __restrict__ df_dev_d2_v2_all,
   T* __restrict__ df_dev_s1_t1_all, T* __restrict__ df_dev_s1_v2_all,
   //  energies
-  const T* __restrict__ dev_evl_sorted_h1b, const T* __restrict__ dev_evl_sorted_h2b, const T* __restrict__ dev_evl_sorted_h3b,
-  const T* __restrict__ dev_evl_sorted_p4b, const T* __restrict__ dev_evl_sorted_p5b, const T* __restrict__ dev_evl_sorted_p6b,
+  const T* __restrict__ dev_evl_sorted_h1b, const T* __restrict__ dev_evl_sorted_h2b,
+  const T* __restrict__ dev_evl_sorted_h3b, const T* __restrict__ dev_evl_sorted_p4b,
+  const T* __restrict__ dev_evl_sorted_p5b, const T* __restrict__ dev_evl_sorted_p6b,
   //    not-fully reduced results
   T* __restrict__ reduced_energy,
   //  common
@@ -133,12 +135,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   //
   int rng_h3, rng_h2, rng_h1, rng_p6, rng_p5, rng_p4;
   int energy_rng_h3, energy_rng_h2, energy_rng_h1, energy_rng_p6, energy_rng_p5, energy_rng_p4;
-  energy_rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-  energy_rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-  energy_rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-  energy_rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-  energy_rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-  energy_rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+  energy_rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+                    ? FUSION_SIZE_SLICE_1_H3
+                    : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+  energy_rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+                    ? FUSION_SIZE_SLICE_1_H2
+                    : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+  energy_rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+                    ? FUSION_SIZE_SLICE_1_H1
+                    : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+  energy_rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+                    ? FUSION_SIZE_SLICE_1_P6
+                    : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+  energy_rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+                    ? FUSION_SIZE_SLICE_1_P5
+                    : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+  energy_rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+                    ? FUSION_SIZE_SLICE_1_P4
+                    : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
   //
   T temp_av;
@@ -216,12 +230,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //  sd1_1
     if(flag_d1_1 >= 0) {
@@ -452,12 +478,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //        sd2_7
     if(flag_d2_7 >= 0) {
@@ -908,12 +946,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //        sd1_4
     if(flag_d1_4 >= 0) {
@@ -1329,12 +1379,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //        (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //  sd2_1
     if(flag_d2_1 >= 0) {
@@ -1748,12 +1810,24 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     str_blk_idx_p4 = blk_idx_p4b * FUSION_SIZE_SLICE_1_P4;
 
     //  (4) rng_h/p*
-    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3) ? FUSION_SIZE_SLICE_1_H3 : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
-    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2) ? FUSION_SIZE_SLICE_1_H2 : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
-    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1) ? FUSION_SIZE_SLICE_1_H1 : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
-    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6) ? FUSION_SIZE_SLICE_1_P6 : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
-    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5) ? FUSION_SIZE_SLICE_1_P5 : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
-    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4) ? FUSION_SIZE_SLICE_1_P4 : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
+    rng_h3 = ((base_size_h3b - str_blk_idx_h3) >= FUSION_SIZE_SLICE_1_H3)
+               ? FUSION_SIZE_SLICE_1_H3
+               : (base_size_h3b % FUSION_SIZE_SLICE_1_H3);
+    rng_h2 = ((base_size_h2b - str_blk_idx_h2) >= FUSION_SIZE_SLICE_1_H2)
+               ? FUSION_SIZE_SLICE_1_H2
+               : (base_size_h2b % FUSION_SIZE_SLICE_1_H2);
+    rng_h1 = ((base_size_h1b - str_blk_idx_h1) >= FUSION_SIZE_SLICE_1_H1)
+               ? FUSION_SIZE_SLICE_1_H1
+               : (base_size_h1b % FUSION_SIZE_SLICE_1_H1);
+    rng_p6 = ((base_size_p6b - str_blk_idx_p6) >= FUSION_SIZE_SLICE_1_P6)
+               ? FUSION_SIZE_SLICE_1_P6
+               : (base_size_p6b % FUSION_SIZE_SLICE_1_P6);
+    rng_p5 = ((base_size_p5b - str_blk_idx_p5) >= FUSION_SIZE_SLICE_1_P5)
+               ? FUSION_SIZE_SLICE_1_P5
+               : (base_size_p5b % FUSION_SIZE_SLICE_1_P5);
+    rng_p4 = ((base_size_p4b - str_blk_idx_p4) >= FUSION_SIZE_SLICE_1_P4)
+               ? FUSION_SIZE_SLICE_1_P4
+               : (base_size_p4b % FUSION_SIZE_SLICE_1_P4);
 
     //  flags
     int flag_s1_1 = const_df_s1_exec[0];

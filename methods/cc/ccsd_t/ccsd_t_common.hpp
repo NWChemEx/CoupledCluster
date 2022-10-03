@@ -1,16 +1,15 @@
 #pragma once
 
-#include <cstdio>
 #include <cassert>
+#include <cstdio>
 #include <string>
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-#include "tamm/gpu_streams.hpp"
 #include "tamm/gpu_memory_pool.hpp"
-using tamm::gpuStream_t;
+// #include "tamm/gpu_streams.hpp"
 using tamm::gpuEvent_t;
+using tamm::gpuStream_t;
 #endif
-
 
 #ifdef USE_CUDA
 #define CHECK_ERR(x)                           \
@@ -22,11 +21,11 @@ using tamm::gpuEvent_t;
     }                                          \
   }
 
-#define CUDA_SAFE(x)                                                                \
-  if(cudaSuccess != (x)) {                                                          \
+#define CUDA_SAFE(x)                                                                        \
+  if(cudaSuccess != (x)) {                                                                  \
     printf("CUDA API FAILED AT LINE %d OF FILE %s errorcode: %s, %s\n", __LINE__, __FILE__, \
-           cudaGetErrorName(x), cudaGetErrorString(cudaGetLastError())); \
-    exit(100);                                                          \
+           cudaGetErrorName(x), cudaGetErrorString(cudaGetLastError()));                    \
+    exit(100);                                                                              \
   }
 #endif // USE_CUDA
 
@@ -40,11 +39,11 @@ using tamm::gpuEvent_t;
     }                                         \
   }
 
-#define HIP_SAFE(x)                                                                \
-  if(hipSuccess != (x)) {                                                          \
+#define HIP_SAFE(x)                                                                        \
+  if(hipSuccess != (x)) {                                                                  \
     printf("HIP API FAILED AT LINE %d OF FILE %s errorcode: %s, %s\n", __LINE__, __FILE__, \
-           hipGetErrorName(x), hipGetErrorString(hipGetLastError()));    \
-    exit(100);                                                                     \
+           hipGetErrorName(x), hipGetErrorString(hipGetLastError()));                      \
+    exit(100);                                                                             \
   }
 #endif // USE_HIP
 

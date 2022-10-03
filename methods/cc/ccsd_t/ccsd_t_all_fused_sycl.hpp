@@ -78,7 +78,6 @@ __attribute__((always_inline)) void revised_jk_ccsd_t_fully_fused_kernel(
   const int* __restrict__ const_df_s1_exec, const int* __restrict__ const_df_d1_size,
   const int* __restrict__ const_df_d1_exec, const int* __restrict__ const_df_d2_size,
   const int* __restrict__ const_df_d2_exec) {
-
   sycl::group thread_block = item.get_group();
   int         threadIdx_x  = static_cast<int>(item.get_local_id(1));
   int         threadIdx_y  = static_cast<int>(item.get_local_id(0));
@@ -2430,9 +2429,9 @@ __attribute__((always_inline)) void revised_jk_ccsd_t_fully_fused_kernel(
   T energy_2 = 0.0;
   if(idx_h3 < energy_rng_h3 && idx_h2 < energy_rng_h2 && idx_p6 < energy_rng_p6 &&
      idx_h1 < energy_rng_h1) {
-    #pragma unroll 4
+#pragma unroll 4
     for(unsigned short j = 0; j < 4; j++) {
-      #pragma unroll 4
+#pragma unroll 4
       for(unsigned short i = 0; i < 4; i++) {
         if(i < energy_rng_p5 && j < energy_rng_p4) {
           //
@@ -2460,9 +2459,9 @@ __attribute__((always_inline)) void revised_jk_ccsd_t_fully_fused_kernel(
   T final_energy_1 = 0.0;
   T final_energy_2 = 0.0;
   if(threadIdx_x == 0 && threadIdx_y == 0) {
-    #pragma unroll
+#pragma unroll
     for(unsigned short j = 0; j < 16; j++) {
-      #pragma unroll
+#pragma unroll
       for(unsigned short i = 0; i < 16; i++) {
         final_energy_1 += sm_a[i + j * COL];
         final_energy_2 += sm_b[i + j * COL];
@@ -2504,17 +2503,18 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
   auto           global_range = gridsize * blocksize;
 
   done_compute_event = stream_id.parallel_for<class ccsd_t_syclkernel>(
-    sycl::nd_range<2>(global_range, blocksize), done_copy_event, [=](auto item) [[sycl::reqd_sub_group_size(16)]] {
+    sycl::nd_range<2>(global_range, blocksize), done_copy_event,
+    [=](auto item) [[sycl::reqd_sub_group_size(16)]] {
       revised_jk_ccsd_t_fully_fused_kernel(
-	size_noab, size_nvab, size_max_dim_s1_t1, size_max_dim_s1_v2, size_max_dim_d1_t2,
-	size_max_dim_d1_v2, size_max_dim_d2_t2, size_max_dim_d2_v2, df_dev_d1_t2_all,
-	df_dev_d1_v2_all, df_dev_d2_t2_all, df_dev_d2_v2_all, df_dev_s1_t1_all, df_dev_s1_v2_all,
-	dev_evl_sorted_h1b, dev_evl_sorted_h2b, dev_evl_sorted_h3b, dev_evl_sorted_p4b,
-	dev_evl_sorted_p5b, dev_evl_sorted_p6b, partial_energies,
-	CEIL(base_size_h3b, FUSION_SIZE_SLICE_1_H3), CEIL(base_size_h2b, FUSION_SIZE_SLICE_1_H2),
-	CEIL(base_size_h1b, FUSION_SIZE_SLICE_1_H1), CEIL(base_size_p6b, FUSION_SIZE_SLICE_1_P6),
-	CEIL(base_size_p5b, FUSION_SIZE_SLICE_1_P5), CEIL(base_size_p4b, FUSION_SIZE_SLICE_1_P4),
-	base_size_h1b, base_size_h2b, base_size_h3b, base_size_p4b, base_size_p5b, base_size_p6b,
-	item, host_s1_size, host_s1_exec, host_d1_size, host_d1_exec, host_d2_size, host_d2_exec);
+        size_noab, size_nvab, size_max_dim_s1_t1, size_max_dim_s1_v2, size_max_dim_d1_t2,
+        size_max_dim_d1_v2, size_max_dim_d2_t2, size_max_dim_d2_v2, df_dev_d1_t2_all,
+        df_dev_d1_v2_all, df_dev_d2_t2_all, df_dev_d2_v2_all, df_dev_s1_t1_all, df_dev_s1_v2_all,
+        dev_evl_sorted_h1b, dev_evl_sorted_h2b, dev_evl_sorted_h3b, dev_evl_sorted_p4b,
+        dev_evl_sorted_p5b, dev_evl_sorted_p6b, partial_energies,
+        CEIL(base_size_h3b, FUSION_SIZE_SLICE_1_H3), CEIL(base_size_h2b, FUSION_SIZE_SLICE_1_H2),
+        CEIL(base_size_h1b, FUSION_SIZE_SLICE_1_H1), CEIL(base_size_p6b, FUSION_SIZE_SLICE_1_P6),
+        CEIL(base_size_p5b, FUSION_SIZE_SLICE_1_P5), CEIL(base_size_p4b, FUSION_SIZE_SLICE_1_P4),
+        base_size_h1b, base_size_h2b, base_size_h3b, base_size_p4b, base_size_p5b, base_size_p6b,
+        item, host_s1_size, host_s1_exec, host_d1_size, host_d1_exec, host_d2_size, host_d2_exec);
     });
 }
