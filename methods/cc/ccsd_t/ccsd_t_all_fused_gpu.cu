@@ -2427,24 +2427,26 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
                             //
                             T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
                             T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
-                            T* partial_energies) {
+                            T* partial_energies, gpuEvent_t* done_copy) {
   //
   //    to handle constant memories
   //
-  cudaMemcpyToSymbolAsync(const_df_s1_size, host_s1_size, sizeof(int) * (6), 0,
-                          cudaMemcpyHostToDevice, stream_id);
-  cudaMemcpyToSymbolAsync(const_df_s1_exec, host_s1_exec, sizeof(int) * (9), 0,
-                          cudaMemcpyHostToDevice, stream_id);
+  CUDA_SAFE(cudaMemcpyToSymbolAsync(const_df_s1_size, host_s1_size, sizeof(int) * (6), 0,
+                                    cudaMemcpyHostToDevice, stream_id));
+  CUDA_SAFE(cudaMemcpyToSymbolAsync(const_df_s1_exec, host_s1_exec, sizeof(int) * (9), 0,
+                                    cudaMemcpyHostToDevice, stream_id));
 
-  cudaMemcpyToSymbolAsync(const_df_d1_size, host_d1_size, sizeof(int) * (7 * size_noab), 0,
-                          cudaMemcpyHostToDevice, stream_id);
-  cudaMemcpyToSymbolAsync(const_df_d1_exec, host_d1_exec, sizeof(int) * (9 * size_noab), 0,
-                          cudaMemcpyHostToDevice, stream_id);
+  CUDA_SAFE(cudaMemcpyToSymbolAsync(const_df_d1_size, host_d1_size, sizeof(int) * (7 * size_noab), 0,
+                                    cudaMemcpyHostToDevice, stream_id));
+  CUDA_SAFE(cudaMemcpyToSymbolAsync(const_df_d1_exec, host_d1_exec, sizeof(int) * (9 * size_noab), 0,
+                                    cudaMemcpyHostToDevice, stream_id));
 
-  cudaMemcpyToSymbolAsync(const_df_d2_size, host_d2_size, sizeof(int) * (7 * size_nvab), 0,
-                          cudaMemcpyHostToDevice, stream_id);
-  cudaMemcpyToSymbolAsync(const_df_d2_exec, host_d2_exec, sizeof(int) * (9 * size_nvab), 0,
-                          cudaMemcpyHostToDevice, stream_id);
+  CUDA_SAFE(cudaMemcpyToSymbolAsync(const_df_d2_size, host_d2_size, sizeof(int) * (7 * size_nvab), 0,
+                                    cudaMemcpyHostToDevice, stream_id));
+  CUDA_SAFE(cudaMemcpyToSymbolAsync(const_df_d2_exec, host_d2_exec, sizeof(int) * (9 * size_nvab), 0,
+                                    cudaMemcpyHostToDevice, stream_id));
+
+  CUDA_SAFE(cudaEventRecord(*done_copy, stream_id));
 
   //
   //    Depends on # of Fused Kernel
@@ -5065,7 +5067,7 @@ void ccsd_t_fully_fused_nvidia_tc_fp64(
   //
   T factor, T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
   T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
-  T* dev_energies) {
+  T* dev_energies, gpuEvent_t* done_copy) {
   //
   //    constant memories
   //
@@ -5080,6 +5082,8 @@ void ccsd_t_fully_fused_nvidia_tc_fp64(
                           cudaMemcpyHostToDevice, stream_id);
   cudaMemcpyToSymbolAsync(const_d2_exec, host_exec_d2, sizeof(int) * (9 * size_nvab), 0,
                           cudaMemcpyHostToDevice, stream_id);
+
+  CUDA_SAFE(cudaEventRecord(*done_copy, stream_id));
 
   // printf ("[new] s1: %d,%d,%d/%d,%d,%d/%d,%d,%d\n", host_exec_s1[0], host_exec_s1[1],
   // host_exec_s1[2], host_exec_s1[3], host_exec_s1[4], host_exec_s1[5], host_exec_s1[6],
@@ -5176,7 +5180,7 @@ void ccsd_t_fully_fused_nvidia_tc_fp64<double>(
   //
   double factor, double* dev_evl_sorted_h1b, double* dev_evl_sorted_h2b, double* dev_evl_sorted_h3b,
   double* dev_evl_sorted_p4b, double* dev_evl_sorted_p5b, double* dev_evl_sorted_p6b,
-  double* dev_energies);
+  double* dev_energies, gpuEvent_t* done_copy);
 
 #endif //USE_NV_TC
 
@@ -5201,4 +5205,4 @@ void fully_fused_ccsd_t_gpu<double>(
   //
   double* dev_evl_sorted_h1b, double* dev_evl_sorted_h2b, double* dev_evl_sorted_h3b,
   double* dev_evl_sorted_p4b, double* dev_evl_sorted_p5b, double* dev_evl_sorted_p6b,
-  double* partial_energies);
+  double* partial_energies, gpuEvent_t* done_copy);

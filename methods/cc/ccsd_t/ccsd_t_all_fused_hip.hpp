@@ -2460,7 +2460,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
                             //
                             T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
                             T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
-                            T* partial_energies) {
+                            T* partial_energies, gpuEvent_t* done_copy) {
   //
   //    to handle constant memories
   //
@@ -2480,6 +2480,8 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
   HIP_SAFE(hipMemcpyToSymbolAsync(HIP_SYMBOL(const_df_d2_exec), host_d2_exec,
                                   sizeof(int) * (9 * size_nvab), 0, hipMemcpyHostToDevice,
                                   stream_id));
+
+  HIP_SAFE(hipEventRecord(*done_copy, stream_id));
 
   //
   //    Depends on # of Fused Kernel

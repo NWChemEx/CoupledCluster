@@ -2495,16 +2495,15 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
                             T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
                             T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
                             //
-                            T* partial_energies, gpuEvent_t& done_compute_event,
-                            std::vector<gpuEvent_t>& done_copy_event) {
+                            T* partial_energies) {
   // 	to call the fused kernel for singles, doubles and energies.
 
   sycl::range<2> gridsize(1, num_blocks);
   sycl::range<2> blocksize(FUSION_SIZE_TB_1_Y, FUSION_SIZE_TB_1_X);
   auto           global_range = gridsize * blocksize;
 
-  done_compute_event = stream_id.parallel_for<class ccsd_t_syclkernel>(
-    sycl::nd_range<2>(global_range, blocksize), done_copy_event, [=](auto item) [[sycl::reqd_sub_group_size(16)]] {
+  stream_id.parallel_for<class ccsd_t_syclkernel>(
+    sycl::nd_range<2>(global_range, blocksize), [=](auto item) [[sycl::reqd_sub_group_size(16)]] {
       revised_jk_ccsd_t_fully_fused_kernel(
 	size_noab, size_nvab, size_max_dim_s1_t1, size_max_dim_s1_v2, size_max_dim_d1_t2,
 	size_max_dim_d1_v2, size_max_dim_d2_t2, size_max_dim_d2_v2, df_dev_d1_t2_all,
