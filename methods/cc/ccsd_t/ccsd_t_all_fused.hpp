@@ -148,8 +148,9 @@ void ccsd_t_fully_fused_none_df_none_task(
   T* dev_evl_sorted_p5b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p5b));
   T* dev_evl_sorted_p6b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p6b));
 
-  // This is needed to update the
-  memPool.gpuEventSynchronize(*done_copy);
+  if (!memPool.gpuEventQuery(*done_copy)) {
+    memPool.gpuStreamWaitEvent(stream, *done_copy);
+  }
 #endif
 
   // resets
@@ -188,7 +189,9 @@ void ccsd_t_fully_fused_none_df_none_task(
                      cache_d2t, cache_d2v);
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-  memPool.gpuEventSynchronize(*done_compute);
+  if (!memPool.gpuEventQuery(*done_compute)) {
+    memPool.gpuStreamWaitEvent(stream, *done_compute);
+  }
 
   memPool.gpuMemcpyAsync(dev_evl_sorted_h1b, host_evl_sorted_h1b, sizeof(T) * base_size_h1b, "H2D",
                          stream);
