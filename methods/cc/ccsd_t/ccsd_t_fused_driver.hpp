@@ -115,19 +115,22 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
   energy_l[0] = 0.0;
   energy_l[1] = 0.0;
 
-
 #if defined(USE_CUDA)
-  std::shared_ptr<gpuEvent_t> done_compute(new gpuEvent_t, [](gpuEvent_t* e) { CUDA_SAFE(cudaEventDestroy(*e)); });
-  CUDA_SAFE( cudaEventCreate(done_compute.get()) );
-  std::shared_ptr<gpuEvent_t> done_copy(new gpuEvent_t, [](gpuEvent_t* e) { CUDA_SAFE(cudaEventDestroy(*e)); });
-  CUDA_SAFE( cudaEventCreate(done_copy.get()) );
+  std::shared_ptr<gpuEvent_t> done_compute(new gpuEvent_t,
+                                           [](gpuEvent_t* e) { CUDA_SAFE(cudaEventDestroy(*e)); });
+  CUDA_SAFE(cudaEventCreateWithFlags(done_compute.get(), cudaEventDisableTiming));
+  std::shared_ptr<gpuEvent_t> done_copy(new gpuEvent_t,
+                                        [](gpuEvent_t* e) { CUDA_SAFE(cudaEventDestroy(*e)); });
+  CUDA_SAFE(cudaEventCreateWithFlags(done_copy.get(), cudaEventDisableTiming));
 
   std::shared_ptr<hostEnergyReduceData_t> reduceData = std::make_shared<hostEnergyReduceData_t>();
-#if defined(USE_HIP)
-  std::shared_ptr<gpuEvent_t> done_compute(new gpuEvent_t, [](gpuEvent_t* e) { HIP_SAFE(hipEventDestroy(*e)); });
-  HIP_SAFE( hipEventCreate(done_compute.get()) );
-  std::shared_ptr<gpuEvent_t> done_copy(new gpuEvent_t, [](gpuEvent_t* e) { HIP_SAFE(hipEventDestroy(*e)); });
-  HIP_SAFE( hipEventCreate(done_copy.get()) );
+#elif defined(USE_HIP)
+  std::shared_ptr<gpuEvent_t> done_compute(new gpuEvent_t,
+                                           [](gpuEvent_t* e) { HIP_SAFE(hipEventDestroy(*e)); });
+  HIP_SAFE(hipEventCreateWithFlags(done_compute.get(), hipEventDisableTiming));
+  std::shared_ptr<gpuEvent_t> done_copy(new gpuEvent_t,
+                                        [](gpuEvent_t* e) { HIP_SAFE(hipEventDestroy(*e)); });
+  HIP_SAFE(hipEventCreateWithFlags(done_copy.get(), hipEventDisableTiming));
 
   std::shared_ptr<hostEnergyReduceData_t> reduceData = std::make_shared<hostEnergyReduceData_t>();
 #elif defined(USE_DPCPP)
@@ -199,7 +202,8 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
 
   T* df_host_energies = (T*) getHostMem(sizeof(T) * std::pow(max_num_blocks, 6) * 2);
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-  T* df_dev_energies = static_cast<T*>(memPool.allocate(sizeof(T) * std::pow(max_num_blocks, 6) * 2));
+  T* df_dev_energies =
+    static_cast<T*>(memPool.allocate(sizeof(T) * std::pow(max_num_blocks, 6) * 2));
 #endif
 
   //
@@ -256,10 +260,13 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                         size_T_s1_t1, size_T_s1_v2, size_T_d1_t2, size_T_d1_v2, size_T_d2_t2,
                         size_T_d2_v2,
                         //
-                        energy_l, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
+                        energy_l,
+#if defined(USE_CUDA) || defined(USE_DPCPP)
+                        reduceData.get(),
+#endif
+                        cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
                         //
-                        done_compute.get(), done_copy.get()
-                      );
+                        done_compute.get(), done_copy.get());
 #else
                       total_fused_ccsd_t_cpu<T>(
                         is_restricted, noab, nvab, rank, k_spin, k_range, k_offset, d_t1, d_t2,
@@ -356,28 +363,31 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                         size_T_s1_t1, size_T_s1_v2, size_T_d1_t2, size_T_d1_v2, size_T_d2_t2,
                         size_T_d2_v2,
                         //
-                        energy_l, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
+                        energy_l,
+#if defined(USE_CUDA) || defined(USE_DPCPP)
+                        reduceData.get(),
+#endif
+                        cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
                         //
-                        done_compute.get(), done_copy.get()
-                      );
+                        done_compute.get(), done_copy.get());
 #else
-                      total_fused_ccsd_t_cpu<T>(
-                        is_restricted, noab, nvab, rank, k_spin, k_range, k_offset, d_t1, d_t2, d_v2,
-                        k_evl_sorted,
-                        //
-                        df_host_pinned_s1_t1, df_host_pinned_s1_v2, df_host_pinned_d1_t2,
-                        df_host_pinned_d1_v2, df_host_pinned_d2_t2, df_host_pinned_d2_v2, df_host_energies,
-                        host_d1_size, host_d2_size,
-                        //
-                        df_simple_s1_size, df_simple_d1_size, df_simple_d2_size, df_simple_s1_exec,
-                        df_simple_d1_exec, df_simple_d2_exec,
-                        //
-                        t_h1b, t_h2b, t_h3b, t_p4b, t_p5b, t_p6b, factor, taskcount, max_d1_kernels_pertask,
-                        max_d2_kernels_pertask,
-                        //
-                        size_T_s1_t1, size_T_s1_v2, size_T_d1_t2, size_T_d1_v2, size_T_d2_t2, size_T_d2_v2,
-                        //
-                        energy_l, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v);
+            total_fused_ccsd_t_cpu<T>(
+              is_restricted, noab, nvab, rank, k_spin, k_range, k_offset, d_t1, d_t2, d_v2,
+              k_evl_sorted,
+              //
+              df_host_pinned_s1_t1, df_host_pinned_s1_v2, df_host_pinned_d1_t2,
+              df_host_pinned_d1_v2, df_host_pinned_d2_t2, df_host_pinned_d2_v2, df_host_energies,
+              host_d1_size, host_d2_size,
+              //
+              df_simple_s1_size, df_simple_d1_size, df_simple_d2_size, df_simple_s1_exec,
+              df_simple_d1_exec, df_simple_d2_exec,
+              //
+              t_h1b, t_h2b, t_h3b, t_p4b, t_p5b, t_p6b, factor, taskcount, max_d1_kernels_pertask,
+              max_d2_kernels_pertask,
+              //
+              size_T_s1_t1, size_T_s1_v2, size_T_d1_t2, size_T_d1_v2, size_T_d2_t2, size_T_d2_v2,
+              //
+              energy_l, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v);
 #endif
                     }
                   }
@@ -431,7 +441,8 @@ HIP_SAFE(hipDeviceSynchronize());
   memPool.deallocate(static_cast<void*>(df_dev_d2_t2_all), sizeof(T) * size_T_d2_t2);
   memPool.deallocate(static_cast<void*>(df_dev_d2_v2_all), sizeof(T) * size_T_d2_v2);
 
-  memPool.deallocate(static_cast<void*>(df_dev_energies), sizeof(T) * std::pow(max_num_blocks, 6) * 2);
+  memPool.deallocate(static_cast<void*>(df_dev_energies),
+                     sizeof(T) * std::pow(max_num_blocks, 6) * 2);
 #endif
 
   //
