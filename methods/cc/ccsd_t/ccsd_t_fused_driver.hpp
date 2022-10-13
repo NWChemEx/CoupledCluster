@@ -136,6 +136,8 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
 #elif defined(USE_DPCPP)
   std::shared_ptr<gpuEvent_t> done_compute = std::make_shared<gpuEvent_t>();
   std::shared_ptr<gpuEvent_t> done_copy    = std::make_shared<gpuEvent_t>();
+
+  std::shared_ptr<hostEnergyReduceData_t> reduceData = std::make_shared<hostEnergyReduceData_t>();
 #endif
 
   AtomicCounter* ac = new AtomicCounterGA(ec.pg(), 1);

@@ -59,22 +59,25 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
 #if defined(USE_CUDA) && defined(USE_NV_TC)
 // driver for fully-fused kernel for 3rd gen. tensor core (FP64)
 template<typename T>
-void ccsd_t_fully_fused_nvidia_tc_fp64(
-  gpuStream_t& stream_id, size_t numBlks, size_t size_h3, size_t size_h2, size_t size_h1,
-  size_t size_p6, size_t size_p5, size_t size_p4,
-  //
-  T* dev_s1_t1_all, T* dev_s1_v2_all, T* dev_d1_t2_all, T* dev_d1_v2_all, T* dev_d2_t2_all,
-  T* dev_d2_v2_all,
-  //
-  int* host_size_d1_h7b, int* host_size_d2_p7b, int* host_exec_s1, int* host_exec_d1,
-  int* host_exec_d2,
-  //
-  size_t size_noab, size_t size_nvab, size_t size_max_dim_s1_t1, size_t size_max_dim_s1_v2,
-  size_t size_max_dim_d1_t2, size_t size_max_dim_d1_v2, size_t size_max_dim_d2_t2,
-  size_t size_max_dim_d2_v2,
-  //
-  T factor, T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
-  T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b, T* dev_final_energies);
+void ccsd_t_fully_fused_nvidia_tc_fp64(gpuStream_t& stream_id, size_t numBlks, size_t size_h3,
+                                       size_t size_h2, size_t size_h1, size_t size_p6,
+                                       size_t size_p5, size_t size_p4,
+                                       //
+                                       T* dev_s1_t1_all, T* dev_s1_v2_all, T* dev_d1_t2_all,
+                                       T* dev_d1_v2_all, T* dev_d2_t2_all, T* dev_d2_v2_all,
+                                       //
+                                       int* host_size_d1_h7b, int* host_size_d2_p7b,
+                                       int* host_exec_s1, int* host_exec_d1, int* host_exec_d2,
+                                       //
+                                       size_t size_noab, size_t size_nvab,
+                                       size_t size_max_dim_s1_t1, size_t size_max_dim_s1_v2,
+                                       size_t size_max_dim_d1_t2, size_t size_max_dim_d1_v2,
+                                       size_t size_max_dim_d2_t2, size_t size_max_dim_d2_v2,
+                                       //
+                                       T factor, T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b,
+                                       T* dev_evl_sorted_h3b, T* dev_evl_sorted_p4b,
+                                       T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
+                                       T* dev_final_energies, gpuEvent_t* done_copy);
 #endif
 
 template<typename T>
@@ -111,7 +114,7 @@ void ccsd_t_fully_fused_none_df_none_task(
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
   // get (round-robin) GPU stream from pool
   gpuStream_t& stream = tamm::GPUStreamPool::getInstance().getRRStream();
-
+  std::cout << "Address of the stream: " << stream << std::endl;
   // get GPU memory handle from pool
   auto& memPool = tamm::GPUPooledStorageManager::getInstance();
 #endif
@@ -148,9 +151,7 @@ void ccsd_t_fully_fused_none_df_none_task(
   T* dev_evl_sorted_p5b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p5b));
   T* dev_evl_sorted_p6b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p6b));
 
-  if (!memPool.gpuEventQuery(*done_copy)) {
-    memPool.gpuStreamWaitEvent(stream, *done_copy);
-  }
+  if(!memPool.gpuEventQuery(*done_copy)) { memPool.gpuEventSynchronize(*done_copy); }
 #endif
 
   // resets
@@ -189,9 +190,7 @@ void ccsd_t_fully_fused_none_df_none_task(
                      cache_d2t, cache_d2v);
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-  if (!memPool.gpuEventQuery(*done_compute)) {
-    memPool.gpuStreamWaitEvent(stream, *done_compute);
-  }
+  if(!memPool.gpuEventQuery(*done_compute)) { memPool.gpuEventSynchronize(*done_compute); }
 
   memPool.gpuMemcpyAsync(dev_evl_sorted_h1b, host_evl_sorted_h1b, sizeof(T) * base_size_h1b, "H2D",
                          stream);
