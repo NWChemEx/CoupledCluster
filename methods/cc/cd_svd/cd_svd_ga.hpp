@@ -354,7 +354,7 @@ Tensor<TensorType> cd_svd_ga(SystemData& sys_data, ExecutionContext& ec, TiledIn
     int64_t nblock[GA_MAX_DIM];
 
 #if defined(USE_UPCXX)
-    ga_over_upcxx* g_chol = new ga_over_upcxx(3, dims, chnk, *team);
+    ga_over_upcxx<TensorType>* g_chol = new ga_over_upcxx<TensorType>(3, dims, chnk, *team);
     g_chol->zero();
 
     int64_t dims2[3] = {nbf, nbf, 1};
@@ -381,8 +381,8 @@ Tensor<TensorType> cd_svd_ga(SystemData& sys_data, ExecutionContext& ec, TiledIn
 
     // TODO: Check k_map;
 #if defined(USE_UPCXX)
-    ga_over_upcxx* g_d = new ga_over_upcxx(3, dims2, chnk2, *team);
-    ga_over_upcxx* g_r = new ga_over_upcxx(3, dims2, chnk2, *team);
+    ga_over_upcxx<TensorType>* g_d = new ga_over_upcxx<TensorType>(3, dims2, chnk2, *team);
+    ga_over_upcxx<TensorType>* g_r = new ga_over_upcxx<TensorType>(3, dims2, chnk2, *team);
     g_d->zero();
 #else
   int     g_d =
@@ -609,12 +609,12 @@ Tensor<TensorType> cd_svd_ga(SystemData& sys_data, ExecutionContext& ec, TiledIn
   auto g_chol_end  = g_chol->local_chunks_end();
 
   while(g_r_iter != g_r_end && g_chol_iter != g_chol_end) {
-    ga_over_upcxx_chunk* g_r_chunk    = *g_r_iter;
-    ga_over_upcxx_chunk* g_chol_chunk = *g_chol_iter;
+    ga_over_upcxx_chunk<TensorType>* g_r_chunk    = *g_r_iter;
+    ga_over_upcxx_chunk<TensorType>* g_chol_chunk = *g_chol_iter;
     assert(g_r_chunk->same_coord(g_chol_chunk) && g_r_chunk->same_size_or_smaller(g_chol_chunk));
 
-    ga_over_upcxx_chunk_view g_chol_view = g_chol_chunk->local_view();
-    ga_over_upcxx_chunk_view g_r_view    = g_r_chunk->local_view();
+    ga_over_upcxx_chunk_view<TensorType> g_chol_view = g_chol_chunk->local_view();
+    ga_over_upcxx_chunk_view<TensorType> g_r_view    = g_r_chunk->local_view();
 
     for(int64_t icount = 0; icount < count; icount++) {
       for(int64_t i = 0; i < g_r_view.get_chunk_size(0); i++) {
@@ -635,12 +635,12 @@ Tensor<TensorType> cd_svd_ga(SystemData& sys_data, ExecutionContext& ec, TiledIn
   g_chol_end  = g_chol->local_chunks_end();
 
   while(g_r_iter != g_r_end && g_chol_iter != g_chol_end) {
-    ga_over_upcxx_chunk* g_r_chunk    = *g_r_iter;
-    ga_over_upcxx_chunk* g_chol_chunk = *g_chol_iter;
+    ga_over_upcxx_chunk<TensorType>* g_r_chunk    = *g_r_iter;
+    ga_over_upcxx_chunk<TensorType>* g_chol_chunk = *g_chol_iter;
     assert(g_r_chunk->same_coord(g_chol_chunk) && g_r_chunk->same_size_or_smaller(g_chol_chunk));
 
-    ga_over_upcxx_chunk_view g_r_view    = g_r_chunk->local_view();
-    ga_over_upcxx_chunk_view g_chol_view = g_chol_chunk->local_view();
+    ga_over_upcxx_chunk_view<TensorType> g_r_view    = g_r_chunk->local_view();
+    ga_over_upcxx_chunk_view<TensorType> g_chol_view = g_chol_chunk->local_view();
 
     for(auto i = 0; i < g_r_view.get_chunk_size(0); i++) {
       for(auto j = 0; j < g_r_view.get_chunk_size(1); j++) {
@@ -695,12 +695,12 @@ Tensor<TensorType> cd_svd_ga(SystemData& sys_data, ExecutionContext& ec, TiledIn
   g_chol_end    = g_chol->local_chunks_end();
 
   while(g_d_iter != g_d_end && g_chol_iter != g_chol_end) {
-    ga_over_upcxx_chunk* g_d_chunk    = *g_d_iter;
-    ga_over_upcxx_chunk* g_chol_chunk = *g_chol_iter;
+    ga_over_upcxx_chunk<TensorType>* g_d_chunk    = *g_d_iter;
+    ga_over_upcxx_chunk<TensorType>* g_chol_chunk = *g_chol_iter;
     assert(g_d_chunk->same_coord(g_chol_chunk) && g_d_chunk->same_size_or_smaller(g_chol_chunk));
 
-    ga_over_upcxx_chunk_view g_chol_view = g_chol_chunk->local_view();
-    ga_over_upcxx_chunk_view g_d_view    = g_d_chunk->local_view();
+    ga_over_upcxx_chunk_view<TensorType> g_chol_view = g_chol_chunk->local_view();
+    ga_over_upcxx_chunk_view<TensorType> g_d_view    = g_d_chunk->local_view();
 
     for(auto i = 0; i < g_d_view.get_chunk_size(0); i++) {
       for(auto j = 0; j < g_d_view.get_chunk_size(1); j++) {
@@ -770,7 +770,7 @@ chnkmo[1] = -1;
 chnkmo[2] = count;
 
 #if defined(USE_UPCXX)
-ga_over_upcxx* g_chol_mo = new ga_over_upcxx(3, dimsmo, chnkmo, *team);
+ga_over_upcxx<TensorType>* g_chol_mo = new ga_over_upcxx<TensorType>(3, dimsmo, chnkmo, *team);
 g_chol_mo->zero();
 #else
       int g_test2 = NGA_Create64(ga_eltype, 3, dimsmo, const_cast<char*>("CholVecMOTmp"), chnkmo);
@@ -994,7 +994,7 @@ chnkmo[1] = -1;
 chnkmo[2] = count;
 
 #if defined(USE_UPCXX)
-ga_over_upcxx* g_chol_mo_copy = new ga_over_upcxx(3, dimsmo, chnkmo, *team);
+ga_over_upcxx<TensorType>* g_chol_mo_copy = new ga_over_upcxx<TensorType>(3, dimsmo, chnkmo, *team);
 g_chol_mo_copy->zero();
 #else
 int g_test_mo = NGA_Create64(ga_eltype, 3, dimsmo, const_cast<char*>("CholVecMOTmp"), chnkmo);
@@ -1026,7 +1026,7 @@ if(iproc < cd_nranks) { // throttle
 ec.pg().barrier();
 #else
 #if defined(USE_UPCXX)
-      ga_over_upcxx* g_chol_mo_copy = g_chol_mo;
+      ga_over_upcxx<TensorType>* g_chol_mo_copy = g_chol_mo;
 #else
       int g_chol_mo_copy = g_chol_mo;
 #endif
