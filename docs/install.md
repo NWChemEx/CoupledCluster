@@ -3,10 +3,16 @@ The installation instructions for this repository are the same as those for the 
 
 Installation
 =============
-- [Software Requirements](https://github.com/NWChemEx-Project/TAMM/blob/main/docs/prerequisites.md)
+- [Software Requirements](https://tamm.readthedocs.io/en/latest/prerequisites.html)
 
-- [Build Instructions](https://github.com/NWChemEx-Project/TAMM/blob/main/docs/install.md)
+- [Build Instructions](https://tamm.readthedocs.io/en/latest/install.html)
 
+Building via Spack
+------------------
+```
+spack repo add ./spack
+spack install coupledcluster [+cuda]
+```
 
 Running the code
 =====================
