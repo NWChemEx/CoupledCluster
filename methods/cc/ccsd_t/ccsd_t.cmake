@@ -23,13 +23,18 @@ if(USE_CUDA)
 
     set(CCSD_T_FUSED_SRCS ${CCSD_T_SRCS}
             ${CCSD_T_SRCDIR}/ccsd_t_all_fused.hpp
-            ${CCSD_T_SRCDIR}/ccsd_t_all_fused_gpu.cu)
+            ${CCSD_T_SRCDIR}/ccsd_t_all_fused_gpu.cu
+            ${CCSD_T_SRCDIR}/ccsd_t_all_fused_nontcCuda_Hip_Sycl.cpp)
 
-elseif(USE_DPCPP)
-    set(CCSD_T_UNFUSED_SRCS ${CCSD_T_SRCS})
+elseif(USE_HIP)
     set(CCSD_T_FUSED_SRCS ${CCSD_T_SRCS}
             ${CCSD_T_SRCDIR}/ccsd_t_all_fused.hpp
-            ${CCSD_T_SRCDIR}/ccsd_t_all_fused_sycl.hpp)
+            ${CCSD_T_SRCDIR}/ccsd_t_all_fused_nontcCuda_Hip_Sycl.cpp)
+
+elseif(USE_DPCPP)
+    set(CCSD_T_FUSED_SRCS ${CCSD_T_SRCS}
+            ${CCSD_T_SRCDIR}/ccsd_t_all_fused.hpp
+            ${CCSD_T_SRCDIR}/ccsd_t_all_fused_nontcCuda_Hip_Sycl.cpp)
 else()
     set(CCSD_T_UNFUSED_SRCS ${CCSD_T_SRCS})
     set(CCSD_T_FUSED_SRCS ${CCSD_T_SRCS}

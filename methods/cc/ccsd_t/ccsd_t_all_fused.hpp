@@ -379,28 +379,7 @@ void ccsd_t_fully_fused_none_df_none_task(
 
 #endif // OPT_KERNEL_TIMING
 
-#if defined(USE_DPCPP)
-  fully_fused_ccsd_t_gpu(stream, num_blocks, k_range[t_h1b], k_range[t_h2b], k_range[t_h3b],
-                         k_range[t_p4b], k_range[t_p5b], k_range[t_p6b],
-                         //
-                         df_dev_d1_t2_all, df_dev_d1_v2_all, df_dev_d2_t2_all, df_dev_d2_v2_all,
-                         df_dev_s1_t1_all, df_dev_s1_v2_all,
-                         //
-                         //  for constant memory
-                         //
-                         df_simple_d1_size, df_simple_d1_exec, df_simple_d2_size, df_simple_d2_exec,
-                         df_simple_s1_size, df_simple_s1_exec,
-                         //
-                         noab, max_dim_d1_t2, max_dim_d1_v2, nvab, max_dim_d2_t2, max_dim_d2_v2,
-                         max_dim_s1_t1, max_dim_s1_v2,
-                         //
-                         factor,
-                         //
-                         dev_evl_sorted_h1b, dev_evl_sorted_h2b, dev_evl_sorted_h3b,
-                         dev_evl_sorted_p4b, dev_evl_sorted_p5b, dev_evl_sorted_p6b,
-                         //
-                         dev_energies, done_compute, done_copy);
-#elif defined(USE_HIP) || (defined(USE_CUDA) && !defined(USE_NV_TC))
+#if defined(USE_DPCPP) || defined(USE_HIP) || (defined(USE_CUDA) && !defined(USE_NV_TC))
   fully_fused_ccsd_t_gpu(stream, num_blocks, k_range[t_h1b], k_range[t_h2b], k_range[t_h3b],
                          k_range[t_p4b], k_range[t_p5b], k_range[t_p6b],
                          //
