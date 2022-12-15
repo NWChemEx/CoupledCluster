@@ -129,9 +129,9 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   int idx_h1 = threadIdx_y / FUSION_SIZE_SLICE_1_P6;
 
   int blk_idx_p4b =
-    blockIdx.x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+    blockIdx_x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
   int tmp_blkIdx =
-    blockIdx.x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+    blockIdx_x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
   int blk_idx_p5b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
   tmp_blkIdx      = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
   int blk_idx_p6b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b);
@@ -139,7 +139,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   int blk_idx_h1b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b);
   tmp_blkIdx      = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b);
   int blk_idx_h2b = (tmp_blkIdx) / (num_blks_h3b);
-  int blk_idx_h3b = blockIdx.x % (num_blks_h3b);
+  int blk_idx_h3b = blockIdx_x % (num_blks_h3b);
 
   int str_blk_idx_h3 = blk_idx_h3b * FUSION_SIZE_SLICE_1_H3;
   int str_blk_idx_h2 = blk_idx_h2b * FUSION_SIZE_SLICE_1_H2;
@@ -225,9 +225,9 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 
     //        (2) blk_idx_h/p*b
     blk_idx_p4b =
-      blockIdx.x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     tmp_blkIdx =
-      blockIdx.x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     blk_idx_p5b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     blk_idx_p6b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b);
@@ -235,7 +235,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     blk_idx_h1b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b);
     blk_idx_h2b = (tmp_blkIdx) / (num_blks_h3b);
-    blk_idx_h3b = blockIdx.x % (num_blks_h3b);
+    blk_idx_h3b = blockIdx_x % (num_blks_h3b);
 
     //        (3) str_blk_idx_h/p*
     str_blk_idx_h3 = blk_idx_h3b * FUSION_SIZE_SLICE_1_H3;
@@ -497,9 +497,9 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 
     //        (2) blk_idx_h/p*b
     blk_idx_p4b =
-      blockIdx.x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     tmp_blkIdx =
-      blockIdx.x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     blk_idx_p5b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     blk_idx_p6b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b);
@@ -507,7 +507,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     blk_idx_h1b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b);
     blk_idx_h2b = (tmp_blkIdx) / (num_blks_h3b);
-    blk_idx_h3b = blockIdx.x % (num_blks_h3b);
+    blk_idx_h3b = blockIdx_x % (num_blks_h3b);
 
     //        (3) str_blk_idx_h/p*
     str_blk_idx_h3 = blk_idx_h3b * FUSION_SIZE_SLICE_1_H3;
@@ -1005,9 +1005,9 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 
     //        (2) blk_idx_h/p*b
     blk_idx_p4b =
-      blockIdx.x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     tmp_blkIdx =
-      blockIdx.x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     blk_idx_p5b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     blk_idx_p6b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b);
@@ -1015,7 +1015,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     blk_idx_h1b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b);
     blk_idx_h2b = (tmp_blkIdx) / (num_blks_h3b);
-    blk_idx_h3b = blockIdx.x % (num_blks_h3b);
+    blk_idx_h3b = blockIdx_x % (num_blks_h3b);
 
     //        (3) str_blk_idx_h/p*
     str_blk_idx_h3 = blk_idx_h3b * FUSION_SIZE_SLICE_1_H3;
@@ -1486,9 +1486,9 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 
     //        (2) blk_idx_h/p*b
     blk_idx_p4b =
-      blockIdx.x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     tmp_blkIdx =
-      blockIdx.x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     blk_idx_p5b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     blk_idx_p6b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b);
@@ -1496,7 +1496,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     blk_idx_h1b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b);
     blk_idx_h2b = (tmp_blkIdx) / (num_blks_h3b);
-    blk_idx_h3b = blockIdx.x % (num_blks_h3b);
+    blk_idx_h3b = blockIdx_x % (num_blks_h3b);
 
     //        (3) str_blk_idx_h/p*
     str_blk_idx_h3 = blk_idx_h3b * FUSION_SIZE_SLICE_1_H3;
@@ -1965,9 +1965,9 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 
     //  (2) blk_idx_h/p*b
     blk_idx_p4b =
-      blockIdx.x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     tmp_blkIdx =
-      blockIdx.x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
+      blockIdx_x % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b * num_blks_p5b);
     blk_idx_p5b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b * num_blks_h1b * num_blks_p6b);
     blk_idx_p6b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b * num_blks_h1b);
@@ -1975,7 +1975,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     blk_idx_h1b = (tmp_blkIdx) / (num_blks_h3b * num_blks_h2b);
     tmp_blkIdx  = (tmp_blkIdx) % (num_blks_h3b * num_blks_h2b);
     blk_idx_h2b = (tmp_blkIdx) / (num_blks_h3b);
-    blk_idx_h3b = blockIdx.x % (num_blks_h3b);
+    blk_idx_h3b = blockIdx_x % (num_blks_h3b);
 
     //  (3) str_blk_idx_h/p*
     str_blk_idx_h3 = blk_idx_h3b * FUSION_SIZE_SLICE_1_H3;
