@@ -33,10 +33,8 @@
 #define FUSION_SIZE_REG_2_X FUSION_SIZE_SLICE_2_P5
 #define FUSION_SIZE_REG_2_Y FUSION_SIZE_SLICE_2_P6
 
-#define NUM_INDEX 6
 #define CEIL(a, b) (((a) + (b) -1) / (b))
 
-#define NUM_IA6_LOOPS 9
 #define NUM_D1_EQUATIONS 9
 #define NUM_D2_EQUATIONS 9
 #define NUM_S1_EQUATIONS 9
@@ -2869,7 +2867,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
   auto           global_range = gridsize * blocksize;
 
   stream_id.parallel_for<class ccsd_t_syclkernel>(
-      sycl::nd_range<2>(global_range, blocksize), done_copy_event, [=](auto item) {
+      sycl::nd_range<2>(global_range, blocksize), [=](auto item) {
 	  revised_jk_ccsd_t_fully_fused_kernel(
 	      size_noab, size_nvab, size_max_dim_s1_t1, size_max_dim_s1_v2, size_max_dim_d1_t2,
 	      size_max_dim_d1_v2, size_max_dim_d2_t2, size_max_dim_d2_v2, df_dev_d1_t2_all,
@@ -2885,3 +2883,26 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
 #endif
 
 }
+
+// Explicit template instantiation: double
+template void fully_fused_ccsd_t_gpu<double>(
+  gpuStream_t& stream_id, size_t num_blocks, size_t base_size_h1b,
+  size_t base_size_h2b, size_t base_size_h3b, size_t base_size_p4b,
+  size_t base_size_p5b, size_t base_size_p6b,
+  //
+  double* df_dev_d1_t2_all, double* df_dev_d1_v2_all, double* df_dev_d2_t2_all,
+  double* df_dev_d2_v2_all, double* df_dev_s1_t1_all, double* df_dev_s1_v2_all,
+  //
+  int* host_d1_size, int* host_d1_exec, // used
+  int* host_d2_size, int* host_d2_exec, int* host_s1_size,
+  int* host_s1_exec,
+  //
+  size_t size_noab, size_t size_max_dim_d1_t2, size_t size_max_dim_d1_v2,
+  size_t size_nvab, size_t size_max_dim_d2_t2, size_t size_max_dim_d2_v2,
+  size_t size_max_dim_s1_t1, size_t size_max_dim_s1_v2,
+  //
+  double factor,
+  //
+  double* dev_evl_sorted_h1b, double* dev_evl_sorted_h2b, double* dev_evl_sorted_h3b,
+  double* dev_evl_sorted_p4b, double* dev_evl_sorted_p5b, double* dev_evl_sorted_p6b,
+  double* partial_energies);
