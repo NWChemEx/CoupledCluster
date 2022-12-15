@@ -2720,8 +2720,8 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   }
 #else
   sycl::sub_group sg = item.get_sub_group();
-  energy_1 = sycl::reduce(sg, energy_1, std::plus<>());
-  energy_2 = sycl::reduce(sg, energy_2, std::plus<>());
+  energy_1 = sycl::reduce_over_group(sg, energy_1, std::plus<>());
+  energy_2 = sycl::reduce_over_group(sg, energy_2, std::plus<>());
 #endif
 
   if(threadIdx_x == 0 && threadIdx_y % 2 == 0) {
