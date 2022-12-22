@@ -1,11 +1,3 @@
-#These are configuration files for QtCreator
-TAMM.config
-TAMM.files
-TAMM.includes
-TAMM.creator
-TAMM.creator.user
-*.autosave
-
 #These are configuration files for CLion
 .idea/
 
@@ -25,3 +17,6 @@ build*
 
 #editor backups
 *~
+
+#Misc
+clang-format
