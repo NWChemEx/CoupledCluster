@@ -308,7 +308,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -376,7 +376,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -443,7 +443,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -585,7 +585,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -659,7 +659,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -733,7 +733,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -1087,7 +1087,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -1156,7 +1156,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -1225,7 +1225,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -1293,7 +1293,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -1361,7 +1361,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -1429,7 +1429,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: -1
@@ -1570,7 +1570,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -1639,7 +1639,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -1708,7 +1708,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -1777,7 +1777,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -1846,7 +1846,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -1915,7 +1915,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
         __syncthreads();
 #else
-        sycl::group_barrier(thread_block);
+        item.barrier(sycl::access::fence_space::local_space);
 #endif
 
         // Cross-Product: 16
@@ -2041,7 +2041,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p4"
@@ -2110,7 +2110,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p4"
@@ -2179,7 +2179,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p4"
@@ -2246,7 +2246,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p5"
@@ -2315,7 +2315,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p5"
@@ -2384,7 +2384,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p5"
@@ -2453,7 +2453,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p4" x "p5"
@@ -2539,7 +2539,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p4" x "p5"
@@ -2625,7 +2625,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
       __syncthreads();
 #else
-      sycl::group_barrier(thread_block);
+      item.barrier(sycl::access::fence_space::local_space);
 #endif
 
       //  "p4" x "p5"
@@ -2708,7 +2708,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 #ifndef USE_DPCPP
   __syncthreads();
 #else
-  sycl::group_barrier(thread_block);
+  item.barrier(sycl::access::fence_space::local_space);
 #endif
 
 //
@@ -2776,7 +2776,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
                             T* dev_evl_sorted_h1b, T* dev_evl_sorted_h2b, T* dev_evl_sorted_h3b,
                             T* dev_evl_sorted_p4b, T* dev_evl_sorted_p5b, T* dev_evl_sorted_p6b,
                             T* partial_energies) {
-    
+
 #ifdef USE_CUDA
   cudaMemcpyToSymbolAsync(const_df_s1_size, host_s1_size, sizeof(int) * (6), 0,
                           cudaMemcpyHostToDevice, stream_id);
@@ -2862,7 +2862,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
     CEIL(base_size_p5b, FUSION_SIZE_SLICE_1_P5), CEIL(base_size_p4b, FUSION_SIZE_SLICE_1_P4),
     //
     (int) base_size_h1b, (int) base_size_h2b, (int) base_size_h3b, (int) base_size_p4b,
-    (int) base_size_p5b, (int) base_size_p6b);  
+    (int) base_size_p5b, (int) base_size_p6b);
 #elif defined(USE_DPCPP)
   sycl::range<2> gridsize(1, num_blocks);
   sycl::range<2> blocksize(FUSION_SIZE_TB_1_Y, FUSION_SIZE_TB_1_X);
@@ -2881,7 +2881,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
 	      CEIL(base_size_p5b, FUSION_SIZE_SLICE_1_P5), CEIL(base_size_p4b, FUSION_SIZE_SLICE_1_P4),
 	      base_size_h1b, base_size_h2b, base_size_h3b, base_size_p4b, base_size_p5b, base_size_p6b,
 	      item, host_s1_size, host_s1_exec, host_d1_size, host_d1_exec, host_d2_size, host_d2_exec);
-      });  
+      });
 #endif
 
 }
