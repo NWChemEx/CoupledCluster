@@ -113,10 +113,10 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   int blockIdx_x  = blockIdx.x;
 #elif defined(USE_DPCPP)
   sycl::group thread_block = item.get_group();
-  int         threadIdx_x  = static_cast<int>(item.get_local_id(1));
-  int         threadIdx_y  = static_cast<int>(item.get_local_id(0));
-  int         blockIdx_x   = static_cast<int>(item.get_group(1));
-  using tile_t             = T[16][64 + 1];
+  int threadIdx_x = static_cast<int>(item.get_local_id(1));
+  int threadIdx_y = static_cast<int>(item.get_local_id(0));
+  int blockIdx_x  = static_cast<int>(item.get_group(1));
+  using tile_t = T[16][64 + 1];
   tile_t& sm_a = *sycl::ext::oneapi::group_local_memory_for_overwrite<tile_t>(thread_block);
   tile_t& sm_b = *sycl::ext::oneapi::group_local_memory_for_overwrite<tile_t>(thread_block);
 #endif
@@ -2715,10 +2715,15 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
 //  to partially reduce the energies--- E(4) and E(5)
 //  a warp: 32 -(1)-> 16 -(2)-> 8 -(3)-> 4 -(4)-> 2
 //
-#ifndef USE_DPCPP
+#ifdef USE_CUDA
   for(int offset = 16; offset > 0; offset /= 2) {
     energy_1 += __shfl_down_sync(FULL_MASK, energy_1, offset);
     energy_2 += __shfl_down_sync(FULL_MASK, energy_2, offset);
+  }
+#elif defined(USE_HIP)
+  for(int offset = 32; offset > 0; offset /= 2) {
+    energy_1 += __shfl_down(FULL_MASK, energy_1, offset);
+    energy_2 += __shfl_down(FULL_MASK, energy_2, offset);
   }
 #else
   sycl::sub_group sg = item.get_sub_group();
