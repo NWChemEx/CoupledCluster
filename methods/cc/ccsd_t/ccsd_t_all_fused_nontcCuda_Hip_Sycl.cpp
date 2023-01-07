@@ -2720,24 +2720,20 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
     energy_1 += __shfl_down_sync(FULL_MASK, energy_1, offset);
     energy_2 += __shfl_down_sync(FULL_MASK, energy_2, offset);
   }
-#elif defined(USE_HIP)
-  for(int offset = 32; offset > 0; offset /= 2) {
-    energy_1 += __shfl_down(FULL_MASK, energy_1, offset);
-    energy_2 += __shfl_down(FULL_MASK, energy_2, offset);
-  }
-#else
-  sycl::sub_group sg = item.get_sub_group();
-  energy_1 = sycl::reduce_over_group(sg, energy_1, std::plus<>());
-  energy_2 = sycl::reduce_over_group(sg, energy_2, std::plus<>());
-#endif
-
   if(threadIdx_x == 0 && threadIdx_y % 2 == 0) {
     sm_a[0][threadIdx_y / 2] = energy_1;
     sm_b[0][threadIdx_y / 2] = energy_2;
   }
-#ifndef USE_DPCPP
   __syncthreads();
-#else
+#elif defined(USE_HIP)
+  // sm_a[16][64]
+  // sm_b[16][64]
+  sm_a[threadIdx_y][threadIdx_x] = energy_1;
+  sm_b[threadIdx_y][threadIdx_x] = energy_2;
+  __syncthreads();
+#else // USE_DPCPP
+  sm_a[threadIdx_y][threadIdx_x] = energy_1;
+  sm_b[threadIdx_y][threadIdx_x] = energy_2;
   item.barrier(sycl::access::fence_space::local_space);
 #endif
 
@@ -2745,10 +2741,22 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   T final_energy_1 = 0.0;
   T final_energy_2 = 0.0;
   if(threadIdx_x == 0 && threadIdx_y == 0) {
+    #ifdef USE_CUDA
     for(int i = 0; i < 8; i++) {
       final_energy_1 += sm_a[0][i];
       final_energy_2 += sm_b[0][i];
     }
+    #else // HIP, SYCL
+    #pragma unroll
+    for(unsigned short j = 0; j < 16; j++) {
+      #pragma unroll
+      for(unsigned short i = 0; i < 16; i++) {
+        final_energy_1 += sm_a[j][i];
+        final_energy_2 += sm_b[j][i];
+      }
+    }
+    #endif
+
     reduced_energy[blockIdx_x] = final_energy_1;
 #ifndef USE_DPCPP
     reduced_energy[blockIdx_x + gridDim.x] = final_energy_2;
