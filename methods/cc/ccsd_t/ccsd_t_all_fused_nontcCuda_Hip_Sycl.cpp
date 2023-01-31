@@ -5,47 +5,47 @@
 #include <vector>
 
 // created by tc_gen_definition()
-#define FUSION_SIZE_SLICE_1_H3 4
-#define FUSION_SIZE_SLICE_1_H2 4
-#define FUSION_SIZE_SLICE_1_H1 4
-#define FUSION_SIZE_SLICE_1_P6 4
-#define FUSION_SIZE_SLICE_1_P5 4
-#define FUSION_SIZE_SLICE_1_P4 4
-#define FUSION_SIZE_SLICE_1_H7 16
+inline constexpr short FUSION_SIZE_SLICE_1_H3{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_1_H2{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_1_H1{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_1_P6{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_1_P5{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_1_P4{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_1_H7{ 16 };
 
-#define FUSION_SIZE_SLICE_2_H3 4
-#define FUSION_SIZE_SLICE_2_H2 4
-#define FUSION_SIZE_SLICE_2_H1 4
-#define FUSION_SIZE_SLICE_2_P6 4
-#define FUSION_SIZE_SLICE_2_P5 4
-#define FUSION_SIZE_SLICE_2_P4 4
-#define FUSION_SIZE_SLICE_2_H7 16
+inline constexpr short FUSION_SIZE_SLICE_2_H3{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_2_H2{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_2_H1{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_2_P6{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_2_P5{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_2_P4{ 4 };
+inline constexpr short FUSION_SIZE_SLICE_2_H7{ 16 };
 
-#define FUSION_SIZE_INT_UNIT FUSION_SIZE_SLICE_1_H7
+inline constexpr short FUSION_SIZE_INT_UNIT{ FUSION_SIZE_SLICE_1_H7 };
 
-#define FUSION_SIZE_TB_1_X FUSION_SIZE_SLICE_1_H3* FUSION_SIZE_SLICE_1_H2
-#define FUSION_SIZE_TB_1_Y FUSION_SIZE_SLICE_1_P6* FUSION_SIZE_SLICE_1_H1
-#define FUSION_SIZE_REG_1_X FUSION_SIZE_SLICE_1_P5
-#define FUSION_SIZE_REG_1_Y FUSION_SIZE_SLICE_1_P4
+inline constexpr short FUSION_SIZE_TB_1_X{ FUSION_SIZE_SLICE_1_H3 * FUSION_SIZE_SLICE_1_H2 };
+inline constexpr short FUSION_SIZE_TB_1_Y{ FUSION_SIZE_SLICE_1_P6 * FUSION_SIZE_SLICE_1_H1 };
+inline constexpr short FUSION_SIZE_REG_1_X{ FUSION_SIZE_SLICE_1_P5 };
+inline constexpr short FUSION_SIZE_REG_1_Y{ FUSION_SIZE_SLICE_1_P4 };
 
-#define FUSION_SIZE_TB_2_X FUSION_SIZE_SLICE_2_H3* FUSION_SIZE_SLICE_2_H2
-#define FUSION_SIZE_TB_2_Y FUSION_SIZE_SLICE_2_P4* FUSION_SIZE_SLICE_2_H1
-#define FUSION_SIZE_REG_2_X FUSION_SIZE_SLICE_2_P5
-#define FUSION_SIZE_REG_2_Y FUSION_SIZE_SLICE_2_P6
+inline constexpr short FUSION_SIZE_TB_2_X{ FUSION_SIZE_SLICE_2_H3 * FUSION_SIZE_SLICE_2_H2 };
+inline constexpr short FUSION_SIZE_TB_2_Y{ FUSION_SIZE_SLICE_2_P4 * FUSION_SIZE_SLICE_2_H1 };
+inline constexpr short FUSION_SIZE_REG_2_X{ FUSION_SIZE_SLICE_2_P5 };
+inline constexpr short FUSION_SIZE_REG_2_Y{ FUSION_SIZE_SLICE_2_P6 };
 
 #define CEIL(a, b) (((a) + (b) -1) / (b))
 
-#define NUM_D1_EQUATIONS 9
-#define NUM_D2_EQUATIONS 9
-#define NUM_S1_EQUATIONS 9
-#define NUM_D1_INDEX 7
-#define NUM_D2_INDEX 7
-#define NUM_S1_INDEX 6
-#define NUM_ENERGIES 2
+inline constexpr short NUM_D1_EQUATIONS{ 9 };
+inline constexpr short NUM_D2_EQUATIONS{ 9 };
+inline constexpr short NUM_S1_EQUATIONS{ 9 };
+inline constexpr short NUM_D1_INDEX{ 7 };
+inline constexpr short NUM_D2_INDEX{ 7 };
+inline constexpr short NUM_S1_INDEX{ 6 };
+inline constexpr short NUM_ENERGIES{ 2 };
 #define FULL_MASK 0xffffffff
 
-#define MAX_NOAB 30
-#define MAX_NVAB 120
+inline constexpr short MAX_NOAB{ 30 };
+inline constexpr short MAX_NVAB{ 120 };
 
 #ifndef USE_DPCPP
 // 64 KB = 65536 bytes = 16384 (int) = 8192 (size_t)
@@ -2879,10 +2879,10 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
 #elif defined(USE_DPCPP)
   sycl::range<2> gridsize(1, num_blocks);
   sycl::range<2> blocksize(FUSION_SIZE_TB_1_Y, FUSION_SIZE_TB_1_X);
-  auto           global_range = gridsize * blocksize;
+  auto global_range = gridsize * blocksize;
 
   stream_id.parallel_for<class ccsd_t_syclkernel>(
-      sycl::nd_range<2>(global_range, blocksize), [=](auto item) {
+      sycl::nd_range<2>(global_range, blocksize), [=](auto item) [[sycl::reqd_sub_group_size(16)]] {
 	  revised_jk_ccsd_t_fully_fused_kernel(
 	      size_noab, size_nvab, size_max_dim_s1_t1, size_max_dim_s1_v2, size_max_dim_d1_t2,
 	      size_max_dim_d1_v2, size_max_dim_d2_t2, size_max_dim_d2_v2, df_dev_d1_t2_all,
