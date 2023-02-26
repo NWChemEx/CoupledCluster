@@ -203,6 +203,8 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 
   // Compute Nuclear repulsion energy.
   auto [ndocc, enuc] = compute_NRE(exc, atoms, sys_data.focc);
+  // Might be actually useful to store?
+  sys_data.results["output"]["SCF"]["nucl_rep_energy"] = enuc;
 
   // Compute number of electrons.
   const auto nelectrons = sys_data.focc * ndocc - charge;

@@ -5,55 +5,14 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <vector>
 
 #define CEIL(a, b) (((a) + (b) -1) / (b))
-
-// OLD
-// void total_fused_ccsd_t_cpu(size_t base_size_h1b, size_t base_size_h2b, size_t base_size_h3b,
-// //handled
-//                             size_t base_size_p4b, size_t base_size_p5b, size_t base_size_p6b,
-//                             //handled
-//                             //
-//                             double* host_d1_t2_all, double* host_d1_v2_all, // T*
-//                             df_host_pinned_s1_t1, T* df_host_pinned_s1_v2, double*
-//                             host_d2_t2_all, double* host_d2_v2_all, // T* df_host_pinned_d1_t2,
-//                             T* df_host_pinned_d1_v2, double* host_s1_t2_all, double*
-//                             host_s1_v2_all, // T* df_host_pinned_d2_t2, T* df_host_pinned_d2_v2,
-//                             //
-//                             size_t size_d1_t2_all, size_t size_d1_v2_all,   // size_T_s1_t1,
-//                             size_T_s1_v2, //handled size_t size_d2_t2_all, size_t size_d2_v2_all,
-//                             // size_T_d1_t2, size_T_d1_v2,//handled size_t size_s1_t2_all, size_t
-//                             size_s1_v2_all,   // size_T_d2_t2, size_T_d2_v2,//handled
-//                             //
-//                             int* list_d1_sizes, //df_simple_d1_size
-//                             int* list_d2_sizes, //df_simple_d2_size
-//                             int* list_s1_sizes, //df_simple_s1_size
-//                             //
-//                             std::vector<int> vec_d1_flags,  //df_simple_d1_exec
-//                             std::vector<int> vec_d2_flags,  //df_simple_d2_exec
-//                             std::vector<int> vec_s1_flags,  //df_simple_s1_exec
-//                             //
-//                             size_t size_noab, size_t size_max_dim_d1_t2, size_t
-//                             size_max_dim_d1_v2, //max_dim_d1_t2,max_dim_d1_v2 size_t size_nvab,
-//                             size_t size_max_dim_d2_t2, size_t size_max_dim_d2_v2,
-//                             //max_dim_d2_t2,max_dim_d2_v2
-//                                               size_t size_max_dim_s1_t2, size_t
-//                                               size_max_dim_s1_v2, //max_dim_s1_t1,max_dim_s1_v2
-//                             //
-//                             double factor,
-//                             double* host_evl_sorted_h1, double* host_evl_sorted_h2, double*
-//                             host_evl_sorted_h3,  //handled double* host_evl_sorted_p4, double*
-//                             host_evl_sorted_p5, double* host_evl_sorted_p6, //handled double*
-//                             final_energy_4, double* final_energy_5)
 
 template<typename T>
 void total_fused_ccsd_t_cpu(
   bool is_restricted, const Index noab, const Index nvab, int64_t rank, std::vector<int>& k_spin,
   std::vector<size_t>& k_range, std::vector<size_t>& k_offset, Tensor<T>& d_t1, Tensor<T>& d_t2,
-  Tensor<T>& d_v2, std::vector<T>& k_evl_sorted,
+  V2Tensors<T>& d_v2, std::vector<T>& k_evl_sorted,
   //
   T* df_host_pinned_s1_t1, T* df_host_pinned_s1_v2, T* df_host_pinned_d1_t2,
   T* df_host_pinned_d1_v2, T* df_host_pinned_d2_t2, T* df_host_pinned_d2_v2, T* host_energies,

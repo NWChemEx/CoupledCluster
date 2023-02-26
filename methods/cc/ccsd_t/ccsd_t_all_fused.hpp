@@ -5,9 +5,6 @@
 void dev_mem_s(size_t, size_t, size_t, size_t, size_t, size_t);
 void dev_mem_d(size_t, size_t, size_t, size_t, size_t, size_t);
 
-#define TEST_NEW_KERNEL
-#define TEST_NEW_THREAD
-
 #define CEIL(a, b) (((a) + (b) -1) / (b))
 
 // driver for the fully-fused kernel (FP64)
@@ -58,7 +55,7 @@ template<typename T>
 void ccsd_t_fully_fused_none_df_none_task(
   bool is_restricted, const Index noab, const Index nvab, int64_t rank, std::vector<int>& k_spin,
   std::vector<size_t>& k_range, std::vector<size_t>& k_offset, Tensor<T>& d_t1, Tensor<T>& d_t2,
-  Tensor<T>& d_v2, std::vector<T>& k_evl_sorted,
+  V2Tensors<T>& d_v2, std::vector<T>& k_evl_sorted,
   //
   T* df_host_pinned_s1_t1, T* df_host_pinned_s1_v2, T* df_host_pinned_d1_t2,
   T* df_host_pinned_d1_v2, T* df_host_pinned_d2_t2, T* df_host_pinned_d2_v2, T* host_energies,

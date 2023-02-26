@@ -8,8 +8,56 @@
 //     }
 // };
 
+inline auto sum_tensor_sizes = [](auto&&... t) {
+  return ((compute_tensor_size(t) + ...) * 8) / (1024 * 1024 * 1024.0);
+};
+
 template<typename T>
-struct V2Tensors {
+class V2Tensors {
+  std::map<std::string, Tensor<T>> tmap;
+  std::vector<Tensor<T>>           allocated_tensors;
+  std::vector<std::string> allowed_blocks = {"ijab", "iajb", "ijka", "ijkl", "iabc", "abcd"};
+  std::vector<std::string> blocks;
+
+  std::vector<std::string> get_tensor_files(const std::string& fprefix) {
+    std::vector<std::string> tensor_files;
+    for(auto block: blocks) tensor_files.push_back(fprefix + ".v2" + block);
+    return tensor_files;
+  }
+
+  void set_map(const TiledIndexSpace& MO) {
+    auto [h1, h2, h3, h4] = MO.labels<4>("occ");
+    auto [p1, p2, p3, p4] = MO.labels<4>("virt");
+
+    for(auto x: blocks) {
+      if(x == "ijab") {
+        v2ijab  = Tensor<T>{{h1, h2, p1, p2}, {2, 2}};
+        tmap[x] = v2ijab;
+      }
+      else if(x == "iajb") {
+        v2iajb  = Tensor<T>{{h1, p1, h2, p2}, {2, 2}};
+        tmap[x] = v2iajb;
+      }
+      else if(x == "ijka") {
+        v2ijka  = Tensor<T>{{h1, h2, h3, p1}, {2, 2}};
+        tmap[x] = v2ijka;
+      }
+      else if(x == "ijkl") {
+        v2ijkl  = Tensor<T>{{h1, h2, h3, h4}, {2, 2}};
+        tmap[x] = v2ijkl;
+      }
+      else if(x == "iabc") {
+        v2iabc  = Tensor<T>{{h1, p1, p2, p3}, {2, 2}};
+        tmap[x] = v2iabc;
+      }
+      else if(x == "abcd") {
+        v2abcd  = Tensor<T>{{p1, p2, p3, p4}, {2, 2}};
+        tmap[x] = v2abcd;
+      }
+    }
+  }
+
+public:
   Tensor<T> v2ijab; // hhpp
   Tensor<T> v2iajb; // hphp
   Tensor<T> v2ijka; // hhhp
@@ -17,53 +65,65 @@ struct V2Tensors {
   Tensor<T> v2iabc; // hppp
   Tensor<T> v2abcd; // pppp
 
-  std::string v2ijab_file, v2iajb_file, v2ijka_file, v2ijkl_file, v2iabc_file, v2abcd_file;
+  V2Tensors() { blocks = allowed_blocks; }
 
-  void deallocate() { Tensor<T>::deallocate(v2ijab, v2iajb, v2ijka, v2ijkl, v2iabc, v2abcd); }
-
-  void allocate(ExecutionContext& ec, const TiledIndexSpace& MO) {
-    auto [h1, h2, h3, h4] = MO.labels<4>("occ");
-    auto [p1, p2, p3, p4] = MO.labels<4>("virt");
-
-    v2ijkl = Tensor<T>{{h1, h2, h3, h4}, {2, 2}};
-    v2ijka = Tensor<T>{{h1, h2, h3, p1}, {2, 2}};
-    v2iajb = Tensor<T>{{h1, p1, h2, p2}, {2, 2}};
-    v2ijab = Tensor<T>{{h1, h2, p1, p2}, {2, 2}};
-    v2iabc = Tensor<T>{{h1, p1, p2, p3}, {2, 2}};
-    v2abcd = Tensor<T>{{p1, p2, p3, p4}, {2, 2}};
-    Tensor<T>::allocate(&ec, v2ijab, v2iajb, v2ijka, v2ijkl, v2iabc, v2abcd);
+  V2Tensors(std::vector<std::string> v2blocks) {
+    blocks              = v2blocks;
+    std::string err_msg = "Error in V2 tensors declaration";
+    for(auto x: blocks) {
+      if(std::find(allowed_blocks.begin(), allowed_blocks.end(), x) == allowed_blocks.end()) {
+        tamm_terminate(err_msg + ": Invalid block [" + x +
+                       "] specified, allowed blocks are [ijab|iajb|ijka|ijkl|iabc|abcd]");
+      }
+    }
   }
 
-  void set_file_prefix(const std::string& fprefix) {
-    v2ijab_file = fprefix + ".v2ijab";
-    v2iajb_file = fprefix + ".v2iajb";
-    v2ijka_file = fprefix + ".v2ijka";
-    v2ijkl_file = fprefix + ".v2ijkl";
-    v2iabc_file = fprefix + ".v2iabc";
-    v2abcd_file = fprefix + ".v2abcd";
+  std::vector<std::string> get_blocks() { return blocks; }
+
+  void deallocate() {
+    ExecutionContext& ec = get_ec(allocated_tensors[0]());
+    Scheduler         sch{ec};
+    for(auto x: allocated_tensors) sch.deallocate(x);
+    sch.execute();
+  }
+
+  T tensor_sizes(const TiledIndexSpace& MO) {
+    set_map(MO);
+    T v2_sizes{};
+    for(auto iter = tmap.begin(); iter != tmap.end(); ++iter)
+      v2_sizes += sum_tensor_sizes(iter->second);
+    return v2_sizes;
+  }
+
+  void allocate(ExecutionContext& ec, const TiledIndexSpace& MO) {
+    set_map(MO);
+
+    for(auto iter = tmap.begin(); iter != tmap.end(); ++iter)
+      allocated_tensors.push_back(iter->second);
+
+    Scheduler sch{ec};
+    for(auto x: allocated_tensors) sch.allocate(x);
+    sch.execute();
   }
 
   void write_to_disk(const std::string& fprefix) {
-    set_file_prefix(fprefix);
+    auto tensor_files = get_tensor_files(fprefix);
     // TODO: Assume all on same ec for now
-    ExecutionContext& ec = get_ec(v2ijab());
-    tamm::write_to_disk_group<T>(
-      ec, {v2ijab, v2iajb, v2ijka, v2ijkl, v2iabc, v2abcd},
-      {v2ijab_file, v2iajb_file, v2ijka_file, v2ijkl_file, v2iabc_file, v2abcd_file});
+    ExecutionContext& ec = get_ec(allocated_tensors[0]());
+    tamm::write_to_disk_group<T>(ec, allocated_tensors, tensor_files);
   }
 
   void read_from_disk(const std::string& fprefix) {
-    set_file_prefix(fprefix);
-    ExecutionContext& ec = get_ec(v2ijab());
-    tamm::read_from_disk_group<T>(
-      ec, {v2ijab, v2iajb, v2ijka, v2ijkl, v2iabc, v2abcd},
-      {v2ijab_file, v2iajb_file, v2ijka_file, v2ijkl_file, v2iabc_file, v2abcd_file});
+    auto              tensor_files = get_tensor_files(fprefix);
+    ExecutionContext& ec           = get_ec(allocated_tensors[0]());
+    tamm::read_from_disk_group<T>(ec, allocated_tensors, tensor_files);
   }
 
   bool exist_on_disk(const std::string& fprefix) {
-    set_file_prefix(fprefix);
-    return (fs::exists(v2ijab_file) && fs::exists(v2iajb_file) && fs::exists(v2ijka_file) &&
-            fs::exists(v2ijkl_file) && fs::exists(v2iabc_file) && fs::exists(v2abcd_file));
+    auto tensor_files = get_tensor_files(fprefix);
+    bool tfiles_exist = std::all_of(tensor_files.begin(), tensor_files.end(),
+                                    [](std::string x) { return fs::exists(x); });
+    return tfiles_exist;
   }
 };
 
@@ -483,10 +543,6 @@ inline void ccsd_stats(ExecutionContext& ec, double hf_energy, double residual, 
 //   Tensor<T>::deallocate(d_r1, d_r2, d_t1, d_t2, d_f1);//, d_v2);
 // }
 
-inline auto sum_tensor_sizes = [](auto&&... t) {
-  return ((compute_tensor_size(t) + ...) * 8) / (1024 * 1024 * 1024.0);
-};
-
 inline auto free_vec_tensors = [](auto&&... vecx) {
   (std::for_each(vecx.begin(), vecx.end(), [](auto& t) { t.deallocate(); }), ...);
 };
@@ -540,33 +596,50 @@ setupLambdaTensors(ExecutionContext& ec, TiledIndexSpace& MO, size_t ndiis) {
 }
 
 template<typename T>
-V2Tensors<T> setupV2Tensors(ExecutionContext& ec, Tensor<T> cholVpr,
-                            ExecutionHW ex_hw = ExecutionHW::CPU) {
+V2Tensors<T>
+setupV2Tensors(ExecutionContext& ec, Tensor<T> cholVpr, ExecutionHW ex_hw = ExecutionHW::CPU,
+               std::vector<std::string> blocks = {"ijab", "iajb", "ijka", "ijkl", "iabc", "abcd"}) {
   TiledIndexSpace MO    = cholVpr.tiled_index_spaces()[0]; // MO
   TiledIndexSpace CI    = cholVpr.tiled_index_spaces()[2]; // CI
   auto [cind]           = CI.labels<1>("all");
   auto [h1, h2, h3, h4] = MO.labels<4>("occ");
   auto [p1, p2, p3, p4] = MO.labels<4>("virt");
 
-  V2Tensors<T> v2tensors;
+  V2Tensors<T> v2tensors(blocks);
   v2tensors.allocate(ec, MO);
+  Scheduler sch{ec};
 
-  // clang-format off
-  Scheduler{ec}
-  ( v2tensors.v2ijkl(h1,h2,h3,h4)      =   1.0 * cholVpr(h1,h3,cind) * cholVpr(h2,h4,cind) )
-  ( v2tensors.v2ijkl(h1,h2,h3,h4)     +=  -1.0 * cholVpr(h1,h4,cind) * cholVpr(h2,h3,cind) )
-  ( v2tensors.v2ijka(h1,h2,h3,p1)      =   1.0 * cholVpr(h1,h3,cind) * cholVpr(h2,p1,cind) )
-  ( v2tensors.v2ijka(h1,h2,h3,p1)     +=  -1.0 * cholVpr(h2,h3,cind) * cholVpr(h1,p1,cind) )
-  ( v2tensors.v2iajb(h1,p1,h2,p2)      =   1.0 * cholVpr(h1,h2,cind) * cholVpr(p1,p2,cind) )
-  ( v2tensors.v2iajb(h1,p1,h2,p2)     +=  -1.0 * cholVpr(h1,p2,cind) * cholVpr(h2,p1,cind) )
-  ( v2tensors.v2ijab(h1,h2,p1,p2)      =   1.0 * cholVpr(h1,p1,cind) * cholVpr(h2,p2,cind) )
-  ( v2tensors.v2ijab(h1,h2,p1,p2)     +=  -1.0 * cholVpr(h1,p2,cind) * cholVpr(h2,p1,cind) )
-  ( v2tensors.v2iabc(h1,p1,p2,p3)      =   1.0 * cholVpr(h1,p2,cind) * cholVpr(p1,p3,cind) )
-  ( v2tensors.v2iabc(h1,p1,p2,p3)     +=  -1.0 * cholVpr(h1,p3,cind) * cholVpr(p1,p2,cind) )
-  ( v2tensors.v2abcd(p1,p2,p3,p4)      =   1.0 * cholVpr(p1,p3,cind) * cholVpr(p2,p4,cind) )
-  ( v2tensors.v2abcd(p1,p2,p3,p4)     +=  -1.0 * cholVpr(p1,p4,cind) * cholVpr(p2,p3,cind) )
-  .execute(ex_hw);
-  // clang-format on
+  for(auto x: blocks) {
+    // clang-format off
+    if      (x == "ijab") {
+      sch( v2tensors.v2ijab(h1,h2,p1,p2)      =   1.0 * cholVpr(h1,p1,cind) * cholVpr(h2,p2,cind) )
+         ( v2tensors.v2ijab(h1,h2,p1,p2)     +=  -1.0 * cholVpr(h1,p2,cind) * cholVpr(h2,p1,cind) );
+    }
+
+    else if (x == "iajb") {
+      sch( v2tensors.v2iajb(h1,p1,h2,p2)      =   1.0 * cholVpr(h1,h2,cind) * cholVpr(p1,p2,cind) )
+         ( v2tensors.v2iajb(h1,p1,h2,p2)     +=  -1.0 * cholVpr(h1,p2,cind) * cholVpr(h2,p1,cind) );
+    }
+    else if (x == "ijka") {
+      sch( v2tensors.v2ijka(h1,h2,h3,p1)      =   1.0 * cholVpr(h1,h3,cind) * cholVpr(h2,p1,cind) )
+         ( v2tensors.v2ijka(h1,h2,h3,p1)     +=  -1.0 * cholVpr(h2,h3,cind) * cholVpr(h1,p1,cind) );
+    }
+    else if (x == "ijkl") {
+      sch( v2tensors.v2ijkl(h1,h2,h3,h4)      =   1.0 * cholVpr(h1,h3,cind) * cholVpr(h2,h4,cind) )
+         ( v2tensors.v2ijkl(h1,h2,h3,h4)     +=  -1.0 * cholVpr(h1,h4,cind) * cholVpr(h2,h3,cind) );
+    }
+    else if (x == "iabc") {
+      sch( v2tensors.v2iabc(h1,p1,p2,p3)      =   1.0 * cholVpr(h1,p2,cind) * cholVpr(p1,p3,cind) )
+         ( v2tensors.v2iabc(h1,p1,p2,p3)     +=  -1.0 * cholVpr(h1,p3,cind) * cholVpr(p1,p2,cind) );
+    }
+    else if (x == "abcd") {
+      sch( v2tensors.v2abcd(p1,p2,p3,p4)      =   1.0 * cholVpr(p1,p3,cind) * cholVpr(p2,p4,cind) )
+         ( v2tensors.v2abcd(p1,p2,p3,p4)     +=  -1.0 * cholVpr(p1,p4,cind) * cholVpr(p2,p3,cind) );
+    }
+    // clang-format on
+  }
+
+  sch.execute(ex_hw);
 
   return v2tensors;
 }

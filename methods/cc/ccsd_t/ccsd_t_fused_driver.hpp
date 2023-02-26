@@ -62,8 +62,8 @@ int checkCudaKernelCompatible(bool r0) {
 template<typename T>
 std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
   SystemData& sys_data, ExecutionContext& ec, std::vector<int>& k_spin, const TiledIndexSpace& MO,
-  Tensor<T>& d_t1, Tensor<T>& d_t2, Tensor<T>& d_v2, std::vector<T>& k_evl_sorted, T hf_ccsd_energy,
-  int nDevices, bool is_restricted, LRUCache<Index, std::vector<T>>& cache_s1t,
+  Tensor<T>& d_t1, Tensor<T>& d_t2, V2Tensors<T>& d_v2, std::vector<T>& k_evl_sorted,
+  T hf_ccsd_energy, int nDevices, bool is_restricted, LRUCache<Index, std::vector<T>>& cache_s1t,
   LRUCache<Index, std::vector<T>>& cache_s1v, LRUCache<Index, std::vector<T>>& cache_d1t,
   LRUCache<Index, std::vector<T>>& cache_d1v, LRUCache<Index, std::vector<T>>& cache_d2t,
   LRUCache<Index, std::vector<T>>& cache_d2v, bool seq_h3b = false, bool tilesize_opt = true) {
