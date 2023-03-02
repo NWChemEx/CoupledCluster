@@ -341,6 +341,7 @@ void ccsd_t_driver() {
     std::cout << "***** old memory requirement was " << std::setprecision(5) << ccsd_t_mem_old
               << " GiB (old v2 = " << sum_tensor_sizes(t_d_v2)
               << " GiB, new v2 = " << v2tensors.tensor_sizes(MO1) << " GiB)" << std::endl;
+    check_memory_requirements(ec, ccsd_t_mem);
     std::cout << std::string(70, '-') << std::endl;
   }
 
