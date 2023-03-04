@@ -48,12 +48,12 @@ void ccsd_t_driver() {
   auto [sys_data, hf_energy, shells, shell_tile_map, C_AO, F_AO, C_beta_AO, F_beta_AO, AO_opt,
         AO_tis, scf_conv] = hartree_fock_driver<T>(ec, filename);
 
-  CCSDOptions& ccsd_options = sys_data.options_map.ccsd_options;
+  CCSDOptions& ccsd_options   = sys_data.options_map.ccsd_options;
+  const int    ccsdt_tilesize = ccsd_options.ccsdt_tilesize;
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
   if(ccsd_options.ngpu == 0) ccsd_options.ngpu = ec.num_gpu();
-  std::string t_errmsg =
-    check_memory_req(ccsd_options.ngpu, ccsd_options.ccsdt_tilesize, sys_data.nbf);
+  std::string t_errmsg = check_memory_req(ccsd_options.ngpu, ccsdt_tilesize, sys_data.nbf);
   if(!t_errmsg.empty()) tamm_terminate(t_errmsg);
 #endif
 
@@ -307,9 +307,10 @@ void ccsd_t_driver() {
 
   // Tensor<T> d_v2{{N,N,N,N},{2,2}};
   // Tensor<T> t_d_f1{{N1,N1},{1,1}};
+  // Tensor<T> t_d_v2{{N1,N1,N1,N1}, {2,2}};
+
   Tensor<T>    t_d_t1{{V1, O1}, {1, 1}};
   Tensor<T>    t_d_t2{{V1, V1, O1, O1}, {2, 2}};
-  Tensor<T>    t_d_v2{{N1, N1, N1, N1}, {2, 2}};
   Tensor<T>    t_d_cv2{{N1, N1, CI}, {1, 1}};
   V2Tensors<T> v2tensors({"ijab", "ijka", "iabc"});
 
@@ -331,18 +332,70 @@ void ccsd_t_driver() {
     ccsd_t_mem += (Osize * Vsize + Vsize * Vsize * Osize * Osize) * 8 / gib;
   }
 
-  const auto ccsd_t_mem_old = ccsd_t_mem + sum_tensor_sizes(t_d_v2);
+  // const auto ccsd_t_mem_old = ccsd_t_mem + sum_tensor_sizes(t_d_v2);
   ccsd_t_mem += v2tensors.tensor_sizes(MO1);
 
-  if(rank == 0) {
-    std::cout << std::string(70, '-') << std::endl;
-    std::cout << "Total CPU memory required for (T) calculation = " << std::setprecision(5)
-              << ccsd_t_mem << " GiB" << std::endl;
-    std::cout << "***** old memory requirement was " << std::setprecision(5) << ccsd_t_mem_old
-              << " GiB (old v2 = " << sum_tensor_sizes(t_d_v2)
-              << " GiB, new v2 = " << v2tensors.tensor_sizes(MO1) << " GiB)" << std::endl;
-    check_memory_requirements(ec, ccsd_t_mem);
-    std::cout << std::string(70, '-') << std::endl;
+  Index noab       = MO1("occ").num_tiles();
+  Index nvab       = MO1("virt").num_tiles();
+  Index cache_size = ccsd_options.cache_size;
+
+  {
+    Index noa    = MO1("occ_alpha").num_tiles();
+    Index nva    = MO1("virt_alpha").num_tiles();
+    auto  nranks = ec.pg().size().value();
+
+    auto                mo_tiles = MO1.input_tile_sizes();
+    std::vector<size_t> k_range;
+    for(auto x: mo_tiles) k_range.push_back(x);
+    size_t max_pdim = 0;
+    size_t max_hdim = 0;
+    for(size_t t_p4b = noab; t_p4b < noab + nvab; t_p4b++)
+      max_pdim = std::max(max_pdim, k_range[t_p4b]);
+    for(size_t t_h1b = 0; t_h1b < noab; t_h1b++) max_hdim = std::max(max_hdim, k_range[t_h1b]);
+
+    size_t max_d1_kernels_pertask = 9 * noa;
+    size_t max_d2_kernels_pertask = 9 * nva;
+    size_t size_T_s1_t1           = 9 * (max_pdim) * (max_hdim);
+    size_t size_T_s1_v2           = 9 * (max_pdim * max_pdim) * (max_hdim * max_hdim);
+    size_t size_T_d1_t2 = max_d1_kernels_pertask * (max_pdim * max_pdim) * (max_hdim * max_hdim);
+    size_t size_T_d1_v2 = max_d1_kernels_pertask * (max_pdim) * (max_hdim * max_hdim * max_hdim);
+    size_t size_T_d2_t2 = max_d2_kernels_pertask * (max_pdim * max_pdim) * (max_hdim * max_hdim);
+    size_t size_T_d2_v2 = max_d2_kernels_pertask * (max_pdim * max_pdim * max_pdim) * (max_hdim);
+
+    double extra_buf_mem_per_rank =
+      size_T_s1_t1 + size_T_s1_v2 + size_T_d1_t2 + size_T_d1_v2 + size_T_d2_t2 + size_T_d2_v2;
+    extra_buf_mem_per_rank     = extra_buf_mem_per_rank * 8 / gib;
+    double total_extra_buf_mem = extra_buf_mem_per_rank * nranks;
+
+    size_t cache_buf_size =
+      ccsdt_tilesize * ccsdt_tilesize * ccsdt_tilesize * ccsdt_tilesize * 8; // bytes
+    double cache_mem_per_rank =
+      (ccsdt_tilesize * ccsdt_tilesize * 8 + cache_buf_size) * cache_size; // s1 t1+v2
+    cache_mem_per_rank += (noab + nvab) * 2 * cache_size * cache_buf_size; // d1,d2 t2+v2
+    cache_mem_per_rank     = cache_mem_per_rank / gib;
+    double total_cache_mem = cache_mem_per_rank * nranks; // GiB
+
+    if(rank == 0) {
+      double total_ccsd_t_mem = ccsd_t_mem + total_extra_buf_mem + total_cache_mem;
+      std::cout << std::string(70, '-') << std::endl;
+      std::cout << "Total CPU memory required for (T) calculation = " << std::setprecision(5)
+                << total_ccsd_t_mem << " GiB" << std::endl;
+      std::cout << " -- memory required for the input tensors: " << ccsd_t_mem << " GiB"
+                << std::endl;
+      std::cout << " -- memory required for intermediate buffers: " << total_extra_buf_mem << " GiB"
+                << std::endl;
+      std::string cache_msg = " -- memory required for caching intermediate buffers";
+      if(total_cache_mem > (ccsd_t_mem + total_extra_buf_mem) / 2.0)
+        cache_msg += " (set cache_size option in the input file to a lower value to reduce this "
+                     "memory requirement further)";
+      std::cout << cache_msg << ": " << total_cache_mem << " GiB" << std::endl;
+      // std::cout << "***** old memory requirement was " << std::setprecision(5)
+      //           << ccsd_t_mem_old + total_extra_buf_mem + total_cache_mem
+      //           << " GiB (old v2 = " << sum_tensor_sizes(t_d_v2)
+      //           << " GiB, new v2 = " << v2tensors.tensor_sizes(MO1) << " GiB)" << std::endl;
+      check_memory_requirements(ec, total_ccsd_t_mem);
+      std::cout << std::string(70, '-') << std::endl;
+    }
   }
 
   if(computeTData && !skip_ccsd) {
@@ -414,14 +467,6 @@ void ccsd_t_driver() {
 
   // cc_t1 = std::chrono::high_resolution_clock::now();
 
-  Index            noab = MO1("occ").num_tiles();
-  Index            nvab = MO1("virt").num_tiles();
-  std::vector<int> k_spin;
-  for(tamm::Index x = 0; x < noab / 2; x++) k_spin.push_back(1);
-  for(tamm::Index x = noab / 2; x < noab; x++) k_spin.push_back(2);
-  for(tamm::Index x = 0; x < nvab / 2; x++) k_spin.push_back(1);
-  for(tamm::Index x = nvab / 2; x < nvab; x++) k_spin.push_back(2);
-
   bool is_restricted = is_rhf;
 
   if(rank == 0) {
@@ -429,8 +474,7 @@ void ccsd_t_driver() {
     else cout << endl << "Running Open Shell CCSD(T) calculation" << endl;
   }
 
-  bool                            seq_h3b    = true;
-  Index                           cache_size = 32;
+  bool                            seq_h3b = true;
   LRUCache<Index, std::vector<T>> cache_s1t{cache_size};
   LRUCache<Index, std::vector<T>> cache_s1v{cache_size};
   LRUCache<Index, std::vector<T>> cache_d1t{cache_size * noab};
@@ -439,6 +483,12 @@ void ccsd_t_driver() {
   LRUCache<Index, std::vector<T>> cache_d2v{cache_size * nvab};
 
   if(rank == 0 && seq_h3b) cout << "running seq h3b loop variant..." << endl;
+
+  std::vector<int> k_spin;
+  for(tamm::Index x = 0; x < noab / 2; x++) k_spin.push_back(1);
+  for(tamm::Index x = noab / 2; x < noab; x++) k_spin.push_back(2);
+  for(tamm::Index x = 0; x < nvab / 2; x++) k_spin.push_back(1);
+  for(tamm::Index x = nvab / 2; x < nvab; x++) k_spin.push_back(2);
 
   double ccsd_t_time = 0, total_t_time = 0;
   // cc_t1 = std::chrono::high_resolution_clock::now();

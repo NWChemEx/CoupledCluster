@@ -260,7 +260,7 @@ public:
     cout << " noqpa     = " << noqpa << endl;
     cout << " noqpb     = " << noqpb << endl;
     cout << " nvqpa     = " << nvqpa << endl;
-    cout << " nvqpb     = " << nvqpb << endl;
+    cout << " nvqp/b     = " << nvqpb << endl;
     cout << " ieta      = " << ieta << endl;
     cout << " maxnewton = " << maxnewton << endl;
     cout << " maxev     = " << maxev << endl;
@@ -313,6 +313,7 @@ public:
     TCutDOPre     = 3e-2;
 
     ngpu           = 0;
+    cache_size     = 32;
     skip_ccsd      = false;
     ccsdt_tilesize = 28;
 
@@ -390,6 +391,7 @@ public:
   // CCSD(T)
   int  ngpu;
   bool skip_ccsd;
+  int  cache_size;
   int  ccsdt_tilesize;
 
   // DLPNO
@@ -448,6 +450,7 @@ public:
     cout << "{" << endl;
     if(ngpu > 0) {
       cout << " ngpu                 = " << ngpu << endl;
+      cout << " cache_size           = " << cache_size << endl;
       cout << " ccsdt_tilesize       = " << ccsdt_tilesize << endl;
     }
     cout << " ndiis                = " << ndiis << endl;
@@ -535,6 +538,20 @@ public:
   }
 };
 
+class CASOptions: public Options {
+public:
+  CASOptions() = default;
+  CASOptions(Options o): Options(o) {
+    norb    = 0;
+    nel     = 0;
+    FCIDUMP = false;
+  }
+
+  int  norb;
+  int  nel;
+  bool FCIDUMP;
+};
+
 class OptionsMap {
 public:
   OptionsMap() = default;
@@ -543,6 +560,7 @@ public:
   CDOptions   cd_options;
   GWOptions   gw_options;
   CCSDOptions ccsd_options;
+  CASOptions  cas_options;
 };
 
 inline void to_upper(std::string& str) {
@@ -566,13 +584,14 @@ void parse_option(T& val, json j, string key, bool optional = true) {
   }
 }
 
-inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions> parse_json(json& jinput) {
+inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions, CASOptions>
+parse_json(json& jinput) {
   Options options;
 
   parse_option<string>(options.geom_units, jinput["geometry"], "units");
 
-  const std::vector<string> valid_sections{"geometry", "basis", "common", "SCF",
-                                           "CD",       "GW",    "CC",     "comments"};
+  const std::vector<string> valid_sections{"geometry", "basis", "common", "SCF",     "CD",
+                                           "GW",       "CC",    "CAS",    "comments"};
   for(auto& el: jinput.items()) {
     if(std::find(valid_sections.begin(), valid_sections.end(), el.key()) == valid_sections.end())
       tamm_terminate("INPUT FILE ERROR: Invalid section [" + el.key() + "] in the input file");
@@ -627,6 +646,7 @@ inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions> parse_
   CDOptions   cd_options(options);
   GWOptions   gw_options(options);
   CCSDOptions ccsd_options(options);
+  CASOptions  cas_options(options);
 
   // SCF
   // clang-format off
@@ -780,6 +800,7 @@ inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions> parse_
   json jccsd_t = jcc["CCSD(T)"];
   parse_option<int>(ccsd_options.ngpu          , jccsd_t, "ngpu");
   parse_option<bool>(ccsd_options.skip_ccsd    , jccsd_t, "skip_ccsd");
+  parse_option<int>(ccsd_options.cache_size    , jccsd_t, "cache_size");
   parse_option<int>(ccsd_options.ccsdt_tilesize, jccsd_t, "ccsdt_tilesize");
 
   json jeomccsd = jcc["EOMCCSD"];
@@ -835,11 +856,24 @@ inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions> parse_
       tamm_terminate("gf_p_oi_range can only be one of 1 or 2");
   }
 
+  json                      jcas = jinput["CAS"];
+  const std::vector<string> valid_cas{"MOLMPS", // Not used yet
+                                      "norb", "nel", "FCIDUMP"};
+
+  for(auto& el: jcas.items()) {
+    if(std::find(valid_cas.begin(), valid_cas.end(), el.key()) == valid_cas.end())
+      tamm_terminate("INPUT FILE ERROR: Invalid CAS option [" + el.key() + "] in the input file");
+  }
+
+  parse_option<int>(cas_options.norb, jcas, "norb");
+  parse_option<int>(cas_options.nel, jcas, "nel");
+  parse_option<bool>(cas_options.FCIDUMP, jcas, "FCIDUMP");
+
   // options.print();
   // scf_options.print();
   // ccsd_options.print();
 
-  return std::make_tuple(options, scf_options, cd_options, gw_options, ccsd_options);
+  return std::make_tuple(options, scf_options, cd_options, gw_options, ccsd_options, cas_options);
 }
 
 class json_sax_no_exception: public nlohmann::detail::json_sax_dom_parser<json> {
@@ -897,7 +931,8 @@ inline std::tuple<OptionsMap, json> parse_input(std::istream& is) {
     atoms[i].z = z;
   }
 
-  auto [options, scf_options, cd_options, gw_options, ccsd_options] = parse_json(jinput);
+  auto [options, scf_options, cd_options, gw_options, ccsd_options, cas_options] =
+    parse_json(jinput);
 
   json jgeom_bohr;
   bool nw_units_bohr = true;
@@ -950,6 +985,7 @@ inline std::tuple<OptionsMap, json> parse_input(std::istream& is) {
     ccsd_options.eom_microiter = ccsd_options.maxiter;
 
   options_map.ccsd_options = ccsd_options;
+  options_map.cas_options  = cas_options;
 
   return std::make_tuple(options_map, jinput);
 }

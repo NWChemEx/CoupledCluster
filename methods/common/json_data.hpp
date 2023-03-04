@@ -18,17 +18,20 @@ struct SystemData {
   int        nelectrons{};
   int        nelectrons_alpha{};
   int        nelectrons_beta{};
+  int        nelectrons_active{};
   int        n_frozen_core{};
   int        n_frozen_virtual{};
   int        nmo{};
   int        nocc{};
   int        nvir{};
+  int        nact{};
   int        focc{};
   bool       ediis{};
   bool       is_restricted{};
   bool       is_unrestricted{};
   bool       is_restricted_os{};
   bool       is_ks{};
+  // bool       is_cas{};???
 
   std::string scf_type_string;
   std::string input_molecule;
@@ -57,6 +60,7 @@ struct SystemData {
     std::cout << "focc = " << focc << std::endl;
     std::cout << "nmo = " << nmo << std::endl;
     std::cout << "nocc = " << nocc << std::endl;
+    if(nact) std::cout << "nact = " << nact << std::endl;
     std::cout << "nvir = " << nvir << std::endl;
 
     std::cout << "n_occ_alpha = " << n_occ_alpha << std::endl;
@@ -65,6 +69,7 @@ struct SystemData {
     std::cout << "n_vir_beta = " << n_vir_beta << std::endl;
 
     std::cout << "nelectrons = " << nelectrons << std::endl;
+    if(nelectrons_active) std::cout << "nelectrons_active = " << nelectrons_active << std::endl;
     std::cout << "nelectrons_alpha = " << nelectrons_alpha << std::endl;
     std::cout << "nelectrons_beta = " << nelectrons_beta << std::endl;
     std::cout << "n_frozen_core = " << n_frozen_core << std::endl;
