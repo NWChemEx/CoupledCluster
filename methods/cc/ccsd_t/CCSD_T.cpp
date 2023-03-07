@@ -375,8 +375,8 @@ void ccsd_t_driver() {
     cache_mem_per_rank     = cache_mem_per_rank / gib;
     double total_cache_mem = cache_mem_per_rank * nranks; // GiB
 
+    double total_ccsd_t_mem = ccsd_t_mem + total_extra_buf_mem + total_cache_mem;
     if(rank == 0) {
-      double total_ccsd_t_mem = ccsd_t_mem + total_extra_buf_mem + total_cache_mem;
       std::cout << std::string(70, '-') << std::endl;
       std::cout << "Total CPU memory required for (T) calculation = " << std::setprecision(5)
                 << total_ccsd_t_mem << " GiB" << std::endl;
@@ -384,7 +384,7 @@ void ccsd_t_driver() {
                 << std::endl;
       std::cout << " -- memory required for intermediate buffers: " << total_extra_buf_mem << " GiB"
                 << std::endl;
-      std::string cache_msg = " -- memory required for caching intermediate buffers";
+      std::string cache_msg = " -- memory required for caching t1,t2,v2 blocks";
       if(total_cache_mem > (ccsd_t_mem + total_extra_buf_mem) / 2.0)
         cache_msg += " (set cache_size option in the input file to a lower value to reduce this "
                      "memory requirement further)";
@@ -393,9 +393,9 @@ void ccsd_t_driver() {
       //           << ccsd_t_mem_old + total_extra_buf_mem + total_cache_mem
       //           << " GiB (old v2 = " << sum_tensor_sizes(t_d_v2)
       //           << " GiB, new v2 = " << v2tensors.tensor_sizes(MO1) << " GiB)" << std::endl;
-      check_memory_requirements(ec, total_ccsd_t_mem);
       std::cout << std::string(70, '-') << std::endl;
     }
+    check_memory_requirements(ec, total_ccsd_t_mem);
   }
 
   if(computeTData && !skip_ccsd) {

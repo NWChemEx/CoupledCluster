@@ -548,8 +548,8 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     std::cout << std::endl
               << "Total CPU memory required for Open Shell Cholesky CCSD calculation: "
               << std::setprecision(5) << total_ccsd_mem << " GiB" << std::endl;
-    check_memory_requirements(ec, total_ccsd_mem);
   }
+  check_memory_requirements(ec, total_ccsd_mem);
 
   Scheduler   sch{ec};
   ExecutionHW exhw = ec.exhw();
