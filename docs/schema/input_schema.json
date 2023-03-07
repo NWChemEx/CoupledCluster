@@ -234,7 +234,13 @@
             },
             "ccsdt_tilesize": {
               "type": "integer"
-            }
+            },
+            "cache_size": {
+              "type": "integer"
+            },
+            "skip_ccsd": {
+              "type": "boolean"
+            }             
           }
         }
       }
