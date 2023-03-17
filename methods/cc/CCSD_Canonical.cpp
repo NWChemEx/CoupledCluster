@@ -64,8 +64,8 @@ void ccsd_driver() {
 
   // deallocates F_AO, C_AO
   auto [cholVpr, d_f1, lcao, chol_count, max_cvecs, CI] =
-    cd_svd_ga_driver<T>(sys_data, ec, MO, AO_opt, C_AO, F_AO, C_beta_AO, F_beta_AO, shells,
-                        shell_tile_map, ccsd_restart, cholfile);
+    cd_svd_driver<T>(sys_data, ec, MO, AO_opt, C_AO, F_AO, C_beta_AO, F_beta_AO, shells,
+                     shell_tile_map, ccsd_restart, cholfile);
   free_tensors(lcao);
 
   if(ccsd_options.writev) ccsd_options.writet = true;

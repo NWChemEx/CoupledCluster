@@ -247,10 +247,9 @@ Matrix reshape_mo_matrix(SystemData sys_data, Matrix& emat) {
 }
 
 template<typename TensorType>
-Tensor<TensorType> cd_svd_ga(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& tMO,
-                             TiledIndexSpace& tAO, TAMM_SIZE& chol_count,
-                             const TAMM_GA_SIZE max_cvecs, libint2::BasisSet& shells,
-                             Tensor<TensorType>& lcao) {
+Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& tMO,
+                          TiledIndexSpace& tAO, TAMM_SIZE& chol_count, const TAMM_GA_SIZE max_cvecs,
+                          libint2::BasisSet& shells, Tensor<TensorType>& lcao) {
   using libint2::Atom;
   using libint2::Engine;
   using libint2::Operator;

@@ -689,11 +689,10 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
 
 template<typename T>
 std::tuple<Tensor<T>, Tensor<T>, Tensor<T>, TAMM_SIZE, tamm::Tile, TiledIndexSpace>
-cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO,
-                 TiledIndexSpace& AO, Tensor<T> C_AO, Tensor<T> F_AO, Tensor<T> C_beta_AO,
-                 Tensor<T> F_beta_AO, libint2::BasisSet& shells,
-                 std::vector<size_t>& shell_tile_map, bool readv2 = false,
-                 std::string cholfile = "", bool is_dlpno = false) {
+cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& AO,
+              Tensor<T> C_AO, Tensor<T> F_AO, Tensor<T> C_beta_AO, Tensor<T> F_beta_AO,
+              libint2::BasisSet& shells, std::vector<size_t>& shell_tile_map, bool readv2 = false,
+              std::string cholfile = "", bool is_dlpno = false) {
   CDOptions cd_options        = sys_data.options_map.cd_options;
   auto      diagtol           = cd_options.diagtol; // tolerance for the max. diagonal
   cd_options.max_cvecs_factor = 2 * std::abs(std::log10(diagtol));
@@ -729,7 +728,7 @@ cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO
   if(!readv2) {
     two_index_transform(sys_data, ec, C_AO, F_AO, C_beta_AO, F_beta_AO, d_f1, shells, lcao,
                         is_dlpno);
-    if(!is_dlpno) cholVpr = cd_svd_ga(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao);
+    if(!is_dlpno) cholVpr = cd_svd(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao);
     write_to_disk<TensorType>(lcao, lcaofile);
   }
   else {
@@ -759,7 +758,8 @@ cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO
 
   if(rank == 0)
     std::cout << std::endl
-              << "Total Time taken for CD (+SVD): " << cd_svd_time << " secs" << std::endl;
+              << "Total Time taken for Cholesky Decomposition: " << cd_svd_time << " secs"
+              << std::endl;
 
   Tensor<T>::deallocate(C_AO, F_AO);
   if(sys_data.is_unrestricted) Tensor<T>::deallocate(C_beta_AO, F_beta_AO);
