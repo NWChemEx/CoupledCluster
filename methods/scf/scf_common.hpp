@@ -3,6 +3,7 @@
 
 #include <cctype>
 
+#include "common/cutils.hpp"
 #include "common/json_data.hpp"
 #include "common/misc.hpp"
 #include "common/molden.hpp"
@@ -1175,6 +1176,85 @@ inline Matrix compute_shellblock_norm(const libint2::BasisSet& obs, const Matrix
   }
 
   return Ash;
+}
+
+void print_mulliken(OptionsMap& options_map, libint2::BasisSet& shells, Matrix& D, Matrix& D_beta,
+                    Matrix& S, bool is_uhf) {
+  auto        atoms = options_map.options.atoms;
+  BasisSetMap bsm   = construct_basisset_maps(atoms, shells);
+
+  const int                        natoms = atoms.size();
+  std::vector<double>              cs_acharge(natoms, 0);
+  std::vector<double>              os_acharge(natoms, 0);
+  std::vector<double>              net_acharge(natoms, 0);
+  std::vector<std::vector<double>> cs_charge_shell(natoms);
+  std::vector<std::vector<double>> os_charge_shell(natoms);
+  std::vector<std::vector<double>> net_charge_shell(natoms);
+
+  int j = 0;
+  for(size_t x = 0; x < natoms; x++) { // loop over atoms
+    auto atom_shells = bsm.atominfo[x].shells;
+    auto nshells     = atom_shells.size(); // #shells for atom x
+    cs_charge_shell[x].resize(nshells);
+    if(is_uhf) os_charge_shell[x].resize(nshells);
+    for(auto s = 0; s < nshells; s++) { // loop over each shell for atom x
+      double cs_scharge = 0.0, os_scharge = 0.0;
+      for(auto si = 0; si < atom_shells[s].size(); si++) {
+        for(size_t i = 0; i < S.rows(); i++) {
+          const auto ds_cs = D(j, i) * S(j, i);
+          cs_scharge += ds_cs;
+          cs_acharge[x] += ds_cs;
+          if(is_uhf) {
+            const auto ds_os = D_beta(j, i) * S(j, i);
+            os_scharge += ds_os;
+            os_acharge[x] += ds_os;
+          }
+        }
+        j++;
+      }
+      cs_charge_shell[x][s] = cs_scharge;
+      if(is_uhf) os_charge_shell[x][s] = os_scharge;
+    }
+  }
+
+  net_acharge      = cs_acharge;
+  net_charge_shell = cs_charge_shell;
+  if(is_uhf) {
+    for(size_t x = 0; x < natoms; x++) { // loop over atoms
+      net_charge_shell[x].resize(cs_charge_shell[x].size());
+      net_acharge[x] = cs_acharge[x] + os_acharge[x];
+      std::transform(cs_charge_shell[x].begin(), cs_charge_shell[x].end(),
+                     os_charge_shell[x].begin(), net_charge_shell[x].begin(), std::plus<double>());
+    }
+  }
+  const auto mksp = std::string(5, ' ');
+
+  auto print_ma = [&](const std::string dtype, std::vector<double>& acharge,
+                      std::vector<std::vector<double>>& charge_shell) {
+    std::cout << std::endl
+              << mksp << "Mulliken analysis of the " << dtype << " density" << std::endl;
+    std::cout << mksp << std::string(50, '-') << std::endl << std::endl;
+    std::cout << mksp << "   Atom   " << mksp << " Charge " << mksp << "  Shell Charges  "
+              << std::endl;
+    std::cout << mksp << "----------" << mksp << "--------" << mksp << std::string(50, '-')
+              << std::endl;
+
+    for(size_t x = 0; x < natoms; x++) { // loop over atoms
+      const auto Z        = atoms[x].atomic_number;
+      const auto e_symbol = options_map.options.atom_symbol_map[Z];
+      std::cout << mksp << std::setw(3) << std::right << x + 1 << " " << std::left << std::setw(2)
+                << e_symbol << " " << std::setw(3) << std::right << Z << mksp << std::fixed
+                << std::setprecision(2) << std::right << " " << std::setw(5) << acharge[x] << mksp
+                << "  " << std::right;
+      for(auto csx: charge_shell[x]) std::cout << std::setw(5) << csx << " ";
+      std::cout << std::endl;
+    }
+  };
+  print_ma("total", net_acharge, net_charge_shell);
+  if(is_uhf) {
+    print_ma("alpha", cs_acharge, cs_charge_shell);
+    print_ma("beta", os_acharge, os_charge_shell);
+  }
 }
 
 template<typename TensorType>

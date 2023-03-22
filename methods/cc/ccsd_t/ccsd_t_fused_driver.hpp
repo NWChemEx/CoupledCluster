@@ -103,8 +103,9 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
     // cout << "k_spin = " << k_spin << endl;
     // cout << "k_range = " << k_range << endl;
     cout << "MO Tiles = " << mo_tiles << endl;
-
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
     cout << "Using " << nDevices << " gpu devices per node" << endl << endl;
+#endif
   }
 
   // TODO replicate d_t1 L84-89 ccsd_t_gpu.F

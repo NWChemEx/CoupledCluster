@@ -268,12 +268,12 @@ void ccsd_t_driver() {
     if(rank == 0) {
       if(is_rhf)
         std::cout << std::endl
-                  << "Time taken for Closed Shell Cholesky CCSD: " << ccsd_time << " secs"
-                  << std::endl;
+                  << "Time taken for Closed Shell Cholesky CCSD: " << std::setprecision(2)
+                  << ccsd_time << " secs" << std::endl;
       else
         std::cout << std::endl
-                  << "Time taken for Open Shell Cholesky CCSD: " << ccsd_time << " secs"
-                  << std::endl;
+                  << "Time taken for Open Shell Cholesky CCSD: " << std::setprecision(2)
+                  << ccsd_time << " secs" << std::endl;
     }
 
     double printtol = ccsd_options.printtol;
@@ -377,9 +377,9 @@ void ccsd_t_driver() {
 
     double total_ccsd_t_mem = ccsd_t_mem + total_extra_buf_mem + total_cache_mem;
     if(rank == 0) {
-      std::cout << std::string(70, '-') << std::endl;
-      std::cout << "Total CPU memory required for (T) calculation = " << std::setprecision(5)
-                << total_ccsd_t_mem << " GiB" << std::endl;
+      std::cout << std::string(70, '-') << std::setprecision(2) << std::endl;
+      std::cout << "Total CPU memory required for (T) calculation = " << total_ccsd_t_mem << " GiB"
+                << std::endl;
       std::cout << " -- memory required for the input tensors: " << ccsd_t_mem << " GiB"
                 << std::endl;
       std::cout << " -- memory required for intermediate buffers: " << total_extra_buf_mem << " GiB"
@@ -389,7 +389,7 @@ void ccsd_t_driver() {
         cache_msg += " (set cache_size option in the input file to a lower value to reduce this "
                      "memory requirement further)";
       std::cout << cache_msg << ": " << total_cache_mem << " GiB" << std::endl;
-      // std::cout << "***** old memory requirement was " << std::setprecision(5)
+      // std::cout << "***** old memory requirement was "
       //           << ccsd_t_mem_old + total_extra_buf_mem + total_cache_mem
       //           << " GiB (old v2 = " << sum_tensor_sizes(t_d_v2)
       //           << " GiB, new v2 = " << v2tensors.tensor_sizes(MO1) << " GiB)" << std::endl;

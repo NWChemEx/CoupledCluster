@@ -14,7 +14,6 @@ using namespace tamm;
 
 #include "libint2_includes.hpp"
 
-#include "ga/ga-mpi.h"
 #include "ga/ga.h"
 #if defined(USE_UPCXX)
 #include <upcxx/upcxx.hpp>
@@ -63,6 +62,7 @@ public:
   std::string                ext_data_path;
   std::vector<libint2::Atom> atoms;
   std::map<int, std::string> atom_basis_map;
+  std::map<int, std::string> atom_symbol_map;
 
   void print() {
     std::cout << std::defaultfloat;
@@ -145,7 +145,9 @@ public:
   double      alpha; // density mixing parameter
   std::string scf_type;
   std::string xc_type;
-  std::pair<bool, double> print_mos{false, 0.0};
+  // mos_txt: write lcao, mo transformed core H, fock, and v2 to disk as text files.
+  bool                    mos_txt{false};
+  bool                    mulliken_analysis{false};
   std::pair<bool, double> mo_vectors_analysis{false, 0.15};
 
   void print() {
@@ -171,9 +173,11 @@ public:
     cout << " scf_type     = " << scf_type << endl;
     if(!xc_type.empty()) { cout << " xc_type      = " << xc_type << endl; }
 
-    if(scalapack_nb > 1) cout << " scalapack_nb = " << scalapack_nb << endl;
-    if(scalapack_np_row > 0) cout << " scalapack_np_row = " << scalapack_np_row << endl;
-    if(scalapack_np_col > 0) cout << " scalapack_np_col = " << scalapack_np_col << endl;
+    if(scalapack_np_row > 0 && scalapack_np_col > 0) {
+      cout << " scalapack_np_row = " << scalapack_np_row << endl;
+      cout << " scalapack_np_col = " << scalapack_np_col << endl;
+      if(scalapack_nb > 1) cout << " scalapack_nb = " << scalapack_nb << endl;
+    }
     cout << " restart_size = " << restart_size << endl;
     print_bool(" restart     ", restart);
     print_bool(" debug       ", debug);
@@ -181,13 +185,16 @@ public:
     // print_bool(" ediis       ", ediis);
     // cout << " ediis_off    = " << ediis_off   << endl;
     // print_bool(" sad         ", sad);
-    if(print_mos.first) {
-      cout << " print_mos = [" << print_mos.first;
-      cout << "," << print_mos.second << "]" << endl;
-    }
-    if(mo_vectors_analysis.first) {
-      cout << " mo_vectors_analysis = [" << mo_vectors_analysis.first;
-      cout << "," << mo_vectors_analysis.second << "]" << endl;
+    if(mulliken_analysis || mos_txt || mo_vectors_analysis.first) {
+      cout << " print_analysis {" << endl;
+      if(mos_txt) cout << std::boolalpha << "  mos_txt             = " << mos_txt << endl;
+      if(mulliken_analysis)
+        cout << std::boolalpha << "  mulliken_analysis   = " << mulliken_analysis << endl;
+      if(mo_vectors_analysis.first) {
+        cout << "  mo_vectors_analysis = [" << std::boolalpha << mo_vectors_analysis.first;
+        cout << "," << mo_vectors_analysis.second << "]" << endl;
+      }
+      cout << " }" << endl;
     }
     cout << "}" << endl;
   }
@@ -197,7 +204,8 @@ class CDOptions: public Options {
 public:
   CDOptions() = default;
   CDOptions(Options o): Options(o) {
-    diagtol = 1e-6;
+    diagtol      = 1e-6;
+    write_vcount = 5000;
     // At most 8*ao CholVec's. For vast majority cases, this is way
     // more than enough. For very large basis, it can be increased.
     max_cvecs_factor = 12;
@@ -205,14 +213,18 @@ public:
 
   double diagtol;
   int    max_cvecs_factor;
+  // write to disk after every count number of vectors are computed.
+  // writes only if cc.writet=true and nbf>1000
+  int write_vcount;
 
   void print() {
     std::cout << std::defaultfloat;
     cout << endl << "CD Options" << endl;
     cout << "{" << endl;
+    cout << std::boolalpha << " debug            = " << debug << endl;
     cout << " diagtol          = " << diagtol << endl;
+    cout << " write_vcount     = " << write_vcount << endl;
     cout << " max_cvecs_factor = " << max_cvecs_factor << endl;
-    print_bool(" debug           ", debug);
     cout << "}" << endl;
   }
 };
@@ -328,6 +340,10 @@ public:
     rt_threshold  = 1e-6;
     rt_multiplier = 0.5;
     rt_step_size  = 0.025;
+    secent_x      = 0.1;
+    h_red         = 0.5;
+    h_inc         = 1.2;
+    h_max         = 0.25;
 
     gf_ip       = true;
     gf_ea       = false;
@@ -387,6 +403,10 @@ public:
   double rt_threshold;
   double rt_step_size;
   double rt_multiplier;
+  double secent_x; // secent scale factor
+  double h_red;    // time-step reduction factor
+  double h_inc;    // time-step increase factor
+  double h_max;    // max time-step factor
 
   // CCSD(T)
   int  ngpu;
@@ -680,20 +700,22 @@ parse_json(json& jinput) {
   parse_option<int>   (scf_options.scalapack_np_row, jscf, "scalapack_np_row");
   parse_option<int>   (scf_options.scalapack_np_col, jscf, "scalapack_np_col");
   parse_option<string>(scf_options.ext_data_path   , jscf, "ext_data_path");
-  parse_option<std::pair<bool, double>>(scf_options.print_mos, jscf, "print_mos");
-  parse_option<std::pair<bool, double>>(scf_options.mo_vectors_analysis, jscf, "mo_vectors_analysis");
+
+  json jscf_analysis = jscf["print_analysis"];
+  parse_option<bool> (scf_options.mos_txt          , jscf_analysis, "mos_txt");
+  parse_option<bool> (scf_options.mulliken_analysis, jscf_analysis, "mulliken");
+  parse_option<std::pair<bool, double>>(scf_options.mo_vectors_analysis, jscf_analysis, "mo_vectors");
   // clang-format on
   std::string riscf_str;
   parse_option<string>(riscf_str, jscf, "riscf");
   if(riscf_str == "J") scf_options.riscf = 1;
   else if(riscf_str == "K") scf_options.riscf = 2;
-
   // clang-format off
   const std::vector<string> valid_scf{"charge", "multiplicity", "lshift", "tol_int",
     "tol_lindep", "conve", "convd", "diis_hist","force_tilesize","tilesize","df_tilesize",
     "alpha","writem","nnodes","restart","noscf","ediis","ediis_off","sad","moldenfile",
     "debug","scf_type","xc_type","n_lindep","restart_size","scalapack_nb","riscf",
-    "scalapack_np_row","scalapack_np_col","ext_data_path","print_mos","mo_vectors_analysis","comments"};
+    "scalapack_np_row","scalapack_np_col","ext_data_path","print_analysis","comments"};
   // clang-format on
 
   for(auto& el: jscf.items()) {
@@ -705,10 +727,12 @@ parse_json(json& jinput) {
   json jcd = jinput["CD"];
   parse_option<bool>(cd_options.debug, jcd, "debug");
   parse_option<double>(cd_options.diagtol, jcd, "diagtol");
+  parse_option<int>(cd_options.write_vcount, jcd, "write_vcount");
   parse_option<int>(cd_options.max_cvecs_factor, jcd, "max_cvecs");
   parse_option<string>(cd_options.ext_data_path, jcd, "ext_data_path");
 
-  const std::vector<string> valid_cd{"comments", "debug", "diagtol", "max_cvecs", "ext_data_path"};
+  const std::vector<string> valid_cd{"comments",     "debug",     "diagtol",
+                                     "write_vcount", "max_cvecs", "ext_data_path"};
   for(auto& el: jcd.items()) {
     if(std::find(valid_cd.begin(), valid_cd.end(), el.key()) == valid_cd.end())
       tamm_terminate("INPUT FILE ERROR: Invalid CD option [" + el.key() + "] in the input file");
@@ -781,7 +805,12 @@ parse_json(json& jinput) {
   parse_option<double>(ccsd_options.rt_threshold , jrt_eom, "rt_threshold");
   parse_option<double>(ccsd_options.rt_step_size , jrt_eom, "rt_step_size");
   parse_option<double>(ccsd_options.rt_multiplier, jrt_eom, "rt_multiplier");
+  parse_option<double>(ccsd_options.secent_x     , jrt_eom, "secent_x");
+  parse_option<double>(ccsd_options.h_red        , jrt_eom, "h_red");
+  parse_option<double>(ccsd_options.h_inc        , jrt_eom, "h_inc");
+  parse_option<double>(ccsd_options.h_max        , jrt_eom, "h_max");
 
+  // DLPNO
   json jdlpno = jcc["DLPNO"];
   parse_option<int>   (ccsd_options.max_pnos     , jdlpno, "max_pnos");
   parse_option<size_t>(ccsd_options.keep_npairs  , jdlpno, "keep_npairs");
@@ -900,8 +929,9 @@ inline std::tuple<OptionsMap, json> parse_input(std::istream& is) {
   parse_option<std::vector<string>>(geometry, jinput["geometry"], "coordinates", false);
   size_t natom = geometry.size();
 
-  std::vector<Atom>   atoms(natom);
-  std::vector<string> geom_bohr(natom);
+  std::vector<Atom>          atoms(natom);
+  std::vector<string>        geom_bohr(natom);
+  std::map<int, std::string> atom_symbol_map;
 
   for(size_t i = 0; i < natom; i++) {
     std::string        line = geometry[i];
@@ -925,17 +955,19 @@ inline std::tuple<OptionsMap, json> parse_input(std::istream& is) {
     }
 
     atoms[i].atomic_number = Z;
+    atoms[i].x             = x;
+    atoms[i].y             = y;
+    atoms[i].z             = z;
 
-    atoms[i].x = x;
-    atoms[i].y = y;
-    atoms[i].z = z;
+    atom_symbol_map[Z] = element_symbol;
   }
 
   auto [options, scf_options, cd_options, gw_options, ccsd_options, cas_options] =
     parse_json(jinput);
 
   json jgeom_bohr;
-  bool nw_units_bohr = true;
+  bool nw_units_bohr      = true;
+  options.atom_symbol_map = atom_symbol_map;
   // Done parsing input file
   {
     // If geometry units specified are angstrom, convert to bohr

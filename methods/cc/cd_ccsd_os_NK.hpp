@@ -677,11 +677,9 @@ cd_ccsd_driver_NK(ExecutionContext& ec, const TiledIndexSpace& MO, const TiledIn
 #if 0
            if(residual < thresh || titer + ndiis >= maxiter) { break; }
            if(ec.pg().rank() == 0) {
-               std::cout << " MICROCYCLE DIIS UPDATE:";
-               std::cout.width(21);
-               std::cout << std::right << std::min(titer + ndiis, maxiter) + 1;
-               std::cout.width(21);
-               std::cout << std::right << "5" << std::endl;
+              std::cout << " MICROCYCLE DIIS UPDATE:";
+              std::cout.width(21);
+              std::cout << std::right << std::min(titer + ndiis, maxiter) + 1 << std::endl;
            }
 
 

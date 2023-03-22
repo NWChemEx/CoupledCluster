@@ -759,8 +759,8 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       std::cout << std::endl << std::endl;
       std::cout << " SCF iterations" << endl;
       std::cout << std::string(65, '-') << endl;
-      std::string sph = " Iter     Energy            E-Diff        RMSD        Time(s)";
-      if(scf_conv) sph = " Iter     Energy            E-Diff        Time(s)";
+      std::string sph = " Iter     Energy          E-Diff        RMSD          Time(s)";
+      if(scf_conv) sph = " Iter     Energy          E-Diff          Time(s)";
       std::cout << sph << endl;
       std::cout << std::string(65, '-') << endl;
     }
@@ -1024,6 +1024,10 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       tamm_terminate("Please check SCF input parameters");
     }
 
+    if(rank == 0 && scf_options.mulliken_analysis) {
+      Matrix S = tamm_to_eigen_matrix(ttensors.S1);
+      print_mulliken(options_map, shells, etensors.D, etensors.D_beta, S, is_uhf);
+    }
     // copy to fock matrices allocated on world group
     sch(Fa_global(mu, nu) = ttensors.F_alpha(mu, nu));
     if(is_uhf) sch(Fb_global(mu, nu) = ttensors.F_beta(mu, nu));
@@ -1032,7 +1036,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     if(do_density_fitting)
       Tensor<TensorType>::deallocate(ttensors.xyK_tamm, ttensors.C_occ_tamm, ttensors.Zxy_tamm);
 
-    if(scf_options.print_mos.first) write_to_disk<TensorType>(ttensors.H1, files_prefix + ".hcore");
+    if(scf_options.mos_txt) write_to_disk<TensorType>(ttensors.H1, files_prefix + ".hcore");
 
     Tensor<TensorType>::deallocate(ttensors.H1, ttensors.S1, ttensors.T1, ttensors.V1,
                                    ttensors.F_alpha_tmp, ttensors.ehf_tmp, ttensors.ehf_tamm,

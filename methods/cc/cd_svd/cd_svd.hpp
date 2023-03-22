@@ -256,6 +256,7 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   const bool       readt        = ccsd_options.readt;
   const bool       writet       = ccsd_options.writet;
   const double     diagtol      = sys_data.options_map.cd_options.diagtol;
+  const int        write_vcount = sys_data.options_map.cd_options.write_vcount;
   const tamm::Tile itile_size   = ccsd_options.itilesize;
   // const TAMM_GA_SIZE northo      = sys_data.nbf;
   const TAMM_GA_SIZE nao = sys_data.nbf_orig;
@@ -286,7 +287,10 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   TensorType* k_movecs_sorted = lcao_eig.data();
 
   // Cholesky decomposition
-  if(rank == 0) { cout << endl << "Begin Cholesky Decomposition ... " << endl; }
+  if(rank == 0) {
+    cout << endl << "    Begin Cholesky Decomposition" << endl;
+    cout << std::string(45, '-') << endl;
+  }
 
   // Step A. Initialization
   const auto nbf   = nao;
@@ -303,10 +307,20 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   std::vector<int64_t> hi_x(4, -2); // The upper limits of blocks
   std::vector<int64_t> ld_x(4);     // The leading dims of blocks
 
-#if !defined(USE_UPCXX)
   Tensor<TensorType> g_d_tamm{tAO, tAO};
   Tensor<TensorType> g_r_tamm{tAO, tAO};
   Tensor<TensorType> g_chol_tamm{tAO, tAO, tCI};
+
+  double cd_mem_req       = sum_tensor_sizes(g_d_tamm, g_r_tamm, g_chol_tamm);
+  auto   check_cd_mem_req = [&](const std::string mstep) {
+    if(ec.print())
+      std::cout << "- CPU memory required for " << mstep << ": " << std::setprecision(2)
+                << cd_mem_req << " GiB" << std::endl;
+    check_memory_requirements(ec, cd_mem_req);
+  };
+  check_cd_mem_req("computing cholesky vectors");
+
+#if !defined(USE_UPCXX)
   g_r_tamm.set_dense();
   g_d_tamm.set_dense();
   g_chol_tamm.set_dense();
@@ -322,7 +336,7 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
       out << count << std::endl;
       out.close();
       if(rank == 0)
-        cout << endl << "Number of cholesky vectors written to disk = " << count << endl;
+        cout << endl << "- Number of cholesky vectors written to disk = " << count << endl;
     }
   };
 
@@ -488,7 +502,9 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   auto cd_t2   = std::chrono::high_resolution_clock::now();
   auto cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
   if(rank == 0 && !cd_restart) {
-    std::cout << std::endl << "Time for computing the diagonal: " << cd_time << " secs" << endl;
+    std::cout << std::endl
+              << "- Time for computing the diagonal: " << std::setprecision(2) << cd_time << " secs"
+              << endl;
   }
 
 #if !defined(USE_UPCXX)
@@ -505,13 +521,13 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
     else tamm_terminate("Error reading " + cv_count_file);
 
     if(rank == 0)
-      cout << endl << "[CD restart] Number of cholesky vectors read = " << count << endl;
+      cout << endl << "- [CD restart] Number of cholesky vectors read = " << count << endl;
 
     cd_t2   = std::chrono::high_resolution_clock::now();
     cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
     if(rank == 0) {
-      std::cout << "[CD restart] Time for reading the diagonal and cholesky vectors: " << cd_time
-                << " secs" << endl;
+      std::cout << "- [CD restart] Time for reading the diagonal and cholesky vectors: "
+                << std::setprecision(2) << cd_time << " secs" << endl;
     }
   }
 #endif
@@ -925,7 +941,7 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
 
 #if !defined(USE_UPCXX)
     // Restart
-    if(writet && count % 5000 == 0 && nbf > 1000) { write_chol_vectors(); }
+    if(writet && count % write_vcount == 0 && nbf > 1000) { write_chol_vectors(); }
 #endif
 
   } // while
@@ -938,12 +954,15 @@ g_r->destroy();
 g_d->destroy();
 #endif
 
-  if(rank == 0) std::cout << endl << "Total number of cholesky vectors = " << count << std::endl;
+  if(rank == 0) std::cout << endl << "- Total number of cholesky vectors = " << count << std::endl;
 
   auto cd_t4 = std::chrono::high_resolution_clock::now();
   cd_time    = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t4 - cd_t3)).count();
   if(rank == 0)
-    std::cout << std::endl << "Time to compute cholesky vectors: " << cd_time << " secs" << endl;
+    std::cout << std::endl
+              << "- Time to compute cholesky vectors: " << std::setprecision(2) << cd_time
+              << " secs" << endl
+              << endl;
   // cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t4 - cd_t1)).count();
   // if(rank == 0) std::cout << std::endl << "Total Time for cholesky decomp: " << cd_time << "
   // secs"
@@ -956,6 +975,11 @@ g_d->destroy();
   IndexSpace         CIp{range(0, count)};
   TiledIndexSpace    tCIp{CIp, static_cast<tamm::Tile>(itile_size)};
   Tensor<TensorType> g_chol_ao_tamm{tAO, tAO, tCIp};
+
+  cd_mem_req -= sum_tensor_sizes(g_d_tamm, g_r_tamm);
+  cd_mem_req += sum_tensor_sizes(g_chol_ao_tamm);
+  check_cd_mem_req("resizing the ao cholesky tensor");
+
   Tensor<TensorType>::allocate(&ec, g_chol_ao_tamm);
 
   // convert g_chol_tamm(nD with max_cvecs) to g_chol_ao_tamm(1D with chol_count)
@@ -1013,11 +1037,14 @@ g_d->destroy();
 g_chol->destroy();
 #endif
 
+  Tensor<TensorType> CholVpr_tmp{tMO, tAO, tCIp};
   Tensor<TensorType> CholVpr_tamm{{tMO, tMO, tCIp},
                                   {SpinPosition::upper, SpinPosition::lower, SpinPosition::ignore}};
-
-  Tensor<TensorType> CholVpr_tmp{tMO, tAO, tCIp};
   Tensor<TensorType>::allocate(&ec, CholVpr_tmp);
+
+  cd_mem_req -= sum_tensor_sizes(g_chol_tamm);
+  cd_mem_req += sum_tensor_sizes(CholVpr_tmp);
+  check_cd_mem_req("ao2mo transformation");
 
   auto [mu, nu]   = tAO.labels<2>("all");
   auto [pmo, rmo] = tMO.labels<2>("all");
@@ -1030,6 +1057,10 @@ g_chol->destroy();
 sch(CholVpr_tmp(pmo, mu, cindexp) = lcao(nu, pmo) * g_chol_ao_tamm(nu, mu, cindexp))
   .deallocate(g_chol_ao_tamm).execute(ec.exhw());
 
+  cd_mem_req -= sum_tensor_sizes(g_chol_ao_tamm);
+  cd_mem_req += sum_tensor_sizes(CholVpr_tamm);
+  check_cd_mem_req("the 2-step contraction");
+
 // Contraction 2
 sch.allocate(CholVpr_tamm)
   (CholVpr_tamm(pmo, rmo, cindexp) = lcao(mu, rmo) * CholVpr_tmp(pmo, mu, cindexp))
@@ -1040,7 +1071,14 @@ sch.allocate(CholVpr_tamm)
   cd_t2   = std::chrono::high_resolution_clock::now();
   cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
   if(rank == 0)
-    std::cout << std::endl << "Time for ao to mo transform: " << cd_time << " secs" << std::endl;
+    std::cout << std::endl
+              << "- Time for ao to mo transform: " << std::setprecision(2) << cd_time << " secs"
+              << std::endl;
+
+  if(rank == 0) {
+    cout << endl << "    End Cholesky Decomposition" << endl;
+    cout << std::string(45, '-') << endl;
+  }
 
   chol_count = count;
   return CholVpr_tamm;

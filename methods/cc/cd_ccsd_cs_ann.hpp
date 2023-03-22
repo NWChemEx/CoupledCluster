@@ -363,7 +363,7 @@ cd_ccsd_cs_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
   if(ec.print()) {
     std::cout << std::endl
               << "Total CPU memory required for Closed Shell Cholesky CCSD calculation: "
-              << std::setprecision(5) << total_ccsd_mem << " GiB" << std::endl;
+              << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
   }
   check_memory_requirements(ec, total_ccsd_mem);
 
@@ -466,9 +466,7 @@ cd_ccsd_cs_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
       if(ec.pg().rank() == 0) {
         std::cout << " MICROCYCLE DIIS UPDATE:";
         std::cout.width(21);
-        std::cout << std::right << std::min(titer + ndiis, maxiter) + 1;
-        std::cout.width(21);
-        std::cout << std::right << "5" << std::endl;
+        std::cout << std::right << std::min(titer + ndiis, maxiter) + 1 << std::endl;
       }
 
       std::vector<std::vector<Tensor<T>>> rs{d_r1s, d_r2s};

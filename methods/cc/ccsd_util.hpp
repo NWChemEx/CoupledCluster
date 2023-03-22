@@ -8,20 +8,6 @@
 //     }
 // };
 
-inline auto sum_tensor_sizes = [](auto&&... t) {
-  return ((compute_tensor_size(t) + ...) * 8) / (1024 * 1024 * 1024.0);
-};
-
-void check_memory_requirements(ExecutionContext& ec, double calc_mem) {
-  auto minfo = ec.mem_info();
-  if(calc_mem > static_cast<double>(minfo.total_cpu_mem)) {
-    ec.print_mem_info();
-    string err_msg = "ERROR: Insufficient CPU memory, required = " + std::to_string(calc_mem) +
-                     "GiB, available = " + std::to_string(minfo.total_cpu_mem) + " GiB";
-    tamm_terminate(err_msg);
-  }
-}
-
 template<typename T>
 class V2Tensors {
   std::map<std::string, Tensor<T>> tmap;
@@ -232,14 +218,12 @@ inline std::string ccsd_test(int argc, char* argv[]) {
 inline void iteration_print(SystemData& sys_data, const ProcGroup& pg, int iter, double residual,
                             double energy, double time, string cmethod = "CCSD") {
   if(pg.rank() == 0) {
-    std::cout.width(6);
-    std::cout << std::right << iter + 1 << "  ";
-    std::cout << std::setprecision(13) << residual << "  ";
-    std::cout << std::fixed << std::setprecision(13) << energy << " ";
+    std::cout << std::setw(4) << std::right << iter + 1 << "     ";
+    std::cout << std::setprecision(13) << std::setw(16) << std::left << residual << "  ";
+    std::cout << std::fixed << std::setprecision(13) << std::right << std::setw(16) << energy
+              << " ";
     std::cout << std::fixed << std::setprecision(2);
-    std::cout << std::string(4, ' ') << "0.0";
-    std::cout << std::string(5, ' ') << time;
-    std::cout << std::string(5, ' ') << "0.0" << std::endl;
+    std::cout << std::string(8, ' ') << time << std::endl;
 
     sys_data.results["output"][cmethod]["iter"][std::to_string(iter + 1)] = {
       {"residual", residual}, {"correlation", energy}};
@@ -250,11 +234,9 @@ inline void iteration_print(SystemData& sys_data, const ProcGroup& pg, int iter,
 
 inline void iteration_print_lambda(const ProcGroup& pg, int iter, double residual, double time) {
   if(pg.rank() == 0) {
-    std::cout.width(6);
-    std::cout << std::right << iter + 1 << "  ";
-    std::cout << std::setprecision(13) << residual << "  ";
+    std::cout << std::setw(4) << std::right << iter + 1 << "     ";
+    std::cout << std::setprecision(13) << std::setw(16) << std::left << residual << "  ";
     std::cout << std::fixed << std::setprecision(2);
-    std::cout << std::string(8, ' ') << "0.0";
     std::cout << std::string(5, ' ') << time << std::endl;
   }
 }
@@ -347,11 +329,12 @@ rest_cs(ExecutionContext& ec, const TiledIndexSpace& MO, Tensor<T>& d_r1, Tensor
 
 inline void print_ccsd_header(const bool do_print) {
   if(do_print) {
+    const auto mksp = std::string(10, ' ');
     std::cout << std::endl << std::endl;
     std::cout << " CCSD iterations" << std::endl;
-    std::cout << std::string(66, '-') << std::endl;
-    std::cout << " Iter          Residuum       Correlation     Cpu    Wall    V2*C2" << std::endl;
-    std::cout << std::string(66, '-') << std::endl;
+    std::cout << std::string(60, '-') << std::endl;
+    std::cout << "  Iter     Residuum" << mksp << "Correlation" << mksp << "Time(s)" << std::endl;
+    std::cout << std::string(60, '-') << std::endl;
   }
 }
 
@@ -512,7 +495,9 @@ hartree_fock_driver(ExecutionContext& ec, const string filename) {
   double hf_time =
     std::chrono::duration_cast<std::chrono::duration<double>>((hf_t2 - hf_t1)).count();
   if(rank == 0)
-    std::cout << std::endl << "Time taken for Hartree-Fock: " << hf_time << " secs" << std::endl;
+    std::cout << std::endl
+              << "Time taken for Hartree-Fock: " << std::setprecision(2) << hf_time << " secs"
+              << std::endl;
 
   return std::make_tuple(sys_data, hf_energy, shells, shell_tile_map, C_AO, F_AO, C_beta_AO,
                          F_beta_AO, tAO, tAOt, scf_conv);
@@ -587,7 +572,7 @@ setupLambdaTensors(ExecutionContext& ec, TiledIndexSpace& MO, size_t ndiis) {
     std::cout << std::endl << std::endl;
     std::cout << " Lambda CCSD iterations" << std::endl;
     std::cout << std::string(45, '-') << std::endl;
-    std::cout << " Iter          Residuum          Cpu    Wall" << std::endl;
+    std::cout << "  Iter     Residuum \t      Time(s)" << std::endl;
     std::cout << std::string(45, '-') << std::endl;
   }
 
@@ -681,7 +666,9 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
   double v2_time =
     std::chrono::duration_cast<std::chrono::duration<double>>((cc_t2 - cc_t1)).count();
   if(rank == 0)
-    std::cout << std::endl << "Time to reconstruct V2: " << v2_time << " secs" << std::endl;
+    std::cout << std::endl
+              << "Time to reconstruct V2: " << std::setprecision(2) << v2_time << " secs"
+              << std::endl;
 
   // Tensor<T>::deallocate(d_a2);
   return d_v2;
@@ -758,8 +745,8 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, T
 
   if(rank == 0)
     std::cout << std::endl
-              << "Total Time taken for Cholesky Decomposition: " << cd_svd_time << " secs"
-              << std::endl;
+              << "Total Time taken for Cholesky Decomposition: " << std::setprecision(2)
+              << cd_svd_time << " secs" << std::endl;
 
   Tensor<T>::deallocate(C_AO, F_AO);
   if(sys_data.is_unrestricted) Tensor<T>::deallocate(C_beta_AO, F_beta_AO);
@@ -786,7 +773,7 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, T
     d_f1 = d_f1_new;
   }
 
-  if(!readv2 && sys_data.options_map.scf_options.print_mos.first) {
+  if(!readv2 && sys_data.options_map.scf_options.mos_txt) {
     Scheduler   sch{ec};
     std::string hcorefile = files_dir + "/scf/" + out_fp + ".hcore";
     Tensor<T>   hcore{AO, AO};
@@ -806,7 +793,7 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, T
     // clang-format on
 
     ExecutionContext ec_dense{ec.pg(), DistributionKind::dense, MemoryManagerKind::ga};
-    std::string      mop_dir   = files_dir + "/print_mos/";
+    std::string      mop_dir   = files_dir + "/mos_txt/";
     std::string      mofprefix = mop_dir + out_fp;
     if(!fs::exists(mop_dir)) fs::create_directories(mop_dir);
 

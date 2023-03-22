@@ -171,11 +171,12 @@ void ccsd_driver() {
   if(rank == 0) {
     if(is_rhf)
       std::cout << std::endl
-                << "Time taken for Closed Shell Cholesky CCSD: " << ccsd_time << " secs"
-                << std::endl;
+                << "Time taken for Closed Shell Cholesky CCSD: " << std::setprecision(2)
+                << ccsd_time << " secs" << std::endl;
     else
       std::cout << std::endl
-                << "Time taken for Open Shell Cholesky CCSD: " << ccsd_time << " secs" << std::endl;
+                << "Time taken for Open Shell Cholesky CCSD: " << std::setprecision(2) << ccsd_time
+                << " secs" << std::endl;
   }
 
   double printtol = ccsd_options.printtol;

@@ -547,7 +547,7 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
   if(ec.print()) {
     std::cout << std::endl
               << "Total CPU memory required for Open Shell Cholesky CCSD calculation: "
-              << std::setprecision(5) << total_ccsd_mem << " GiB" << std::endl;
+              << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
   }
   check_memory_requirements(ec, total_ccsd_mem);
 

@@ -24,23 +24,27 @@ void print_mo_vectors_analysis(SystemData& sys_data, libint2::BasisSet& shells, 
 
     cout << std::fixed << std::setprecision(6);
     if(is_rhf)
-      cout << endl << std::string(20, ' ') << "RHF Final Molecular Orbital Analysis" << endl;
+      cout << endl << std::string(10, ' ') << "RHF Final Molecular Orbital Analysis" << endl;
     else
-      cout << endl << std::string(20, ' ') << "UHF Final Alpha Molecular Orbital Analysis" << endl;
-    cout << std::string(20, ' ') << std::string(42, '-') << endl;
+      cout << endl << std::string(10, ' ') << "UHF Final Alpha Molecular Orbital Analysis" << endl;
+    cout << std::string(10, ' ') << std::string(36, '-') << endl;
+
+    const auto mksp = std::string(4, ' ');
 
     for(auto i = 0; i < sys_data.nbf; i++) {
       cout << endl
-           << "Vector\t" << i + 1 << "  Occ = " << occup_alpha[i] << "  E = " << F_MO_alpha(i, i)
-           << endl;
+           << mksp << "Vector" << mksp << i + 1 << "  Occ = " << occup_alpha[i]
+           << "  E = " << F_MO_alpha(i, i) << endl;
 
-      cout << "Bfn. \t Coefficient \t Atom+Function" << endl;
-      cout << std::string(50, '-') << endl;
+      cout << mksp << "Bfn." << mksp << "Coefficient" << mksp << "Atom+Function" << endl;
+      cout << mksp << std::string(45, '-') << endl;
       for(size_t j = 0; j < (size_t) sys_data.nbf_orig; j++) {
         if(std::abs(C_alpha_eig(j, i)) >= vec_analysis.second) {
           auto atom_pos = bsm.bf2atom[j];
-          cout << j + 1 << "\t" << C_alpha_eig(j, i) << "\t" << atom_pos + 1 << "  "
-               << bsm.atominfo[atom_pos].symbol << "  " << bsm.bf_comp[j] << endl;
+          cout << mksp << std::setw(4) << std::right << j + 1 << mksp << std::setw(10) << std::right
+               << C_alpha_eig(j, i) << mksp << std::setw(3) << std::right << atom_pos + 1 << "  "
+               << std::left << std::setw(2) << bsm.atominfo[atom_pos].symbol << "  " << std::left
+               << std::setw(2) << bsm.bf_comp[j] << endl;
         }
       }
     }

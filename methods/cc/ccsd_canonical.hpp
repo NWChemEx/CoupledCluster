@@ -375,9 +375,7 @@ ccsd_spin_driver(SystemData sys_data, ExecutionContext& ec, const TiledIndexSpac
       if(ec.pg().rank() == 0) {
         std::cout << " MICROCYCLE DIIS UPDATE:";
         std::cout.width(21);
-        std::cout << std::right << std::min(titer + ndiis, maxiter) + 1;
-        std::cout.width(21);
-        std::cout << std::right << "5" << std::endl;
+        std::cout << std::right << std::min(titer + ndiis, maxiter) + 1 << std::endl;
       }
 
       std::vector<std::vector<Tensor<T>>> rs{d_r1s, d_r2s};
