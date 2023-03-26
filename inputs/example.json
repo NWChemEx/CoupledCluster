@@ -58,14 +58,18 @@
         "scalapack_np_col": 0,
         "n_lindep": 0,
         "moldenfile": "",
-        "print_mos" : [false,0],
-        "mo_vectors_analysis" : [false,0.15]
+        "print_analysis": {
+          "mos_txt" : false,
+          "mulliken": false,
+          "mo_vectors" : [false,0.15]
+        }
     },
     
     "CD": {
+        "debug": false,
         "diagtol": 1e-6,
         "max_cvecs": 12,
-        "debug": false
+        "write_vcount": 5000
     },
     
     "CC": {

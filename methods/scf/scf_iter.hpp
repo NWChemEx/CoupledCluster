@@ -284,7 +284,7 @@ scf_iter_body(ExecutionContext& ec, ScalapackInfo& scalapack_info, const int& it
   }
 
   double alpha = sys_data.options_map.scf_options.alpha;
-  if(rmsd < 1e-6) { scf_vars.switch_diis = true; } // rmsd check
+  // if(rmsd < 1e-6) { scf_vars.switch_diis = true; } // rmsd check
 
   // D = alpha*D + (1.0-alpha)*D_last;
   if(is_rhf) {

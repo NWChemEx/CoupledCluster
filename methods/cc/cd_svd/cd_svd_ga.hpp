@@ -411,7 +411,11 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
     auto cd_t2 = std::chrono::high_resolution_clock::now();
     auto cd_time =
       std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
-    if(iproc == 0) std::cout << std::endl << "Setup time: " << cd_time << " secs" << endl;
+    if(iproc == 0) {
+      std::cout << endl
+                << std::fixed << std::setprecision(2) << "Setup time: " << cd_time << " secs"
+                << endl;
+    }
 
     // Step B. Compute the diagonal
     Engine      engine(Operator::coulomb, max_nprim(shells), max_l(shells), 0);
@@ -475,8 +479,11 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
 
   auto cd_t3 = std::chrono::high_resolution_clock::now();
   cd_time    = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t3 - cd_t2)).count();
-  if(iproc == 0)
-    std::cout << std::endl << "Time for computing the diagonal: " << cd_time << " secs" << endl;
+  if(iproc == 0) {
+    std::cout << endl
+              << "Time for computing the diagonal: " << std::fixed << std::setprecision(2)
+              << cd_time << " secs" << endl;
+  }
 
 // Step C. Find the coordinates of the maximum element of the diagonal.
 #if defined(USE_UPCXX)
@@ -745,11 +752,11 @@ g_d->destroy();
 
 auto cd_t4 = std::chrono::high_resolution_clock::now();
 cd_time    = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t4 - cd_t3)).count();
-if(iproc == 0)
-  std::cout << std::endl << "Time to compute cholesky vectors: " << cd_time << " secs" << endl;
-// cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t4 - cd_t1)).count();
-// if(iproc == 0) std::cout << std::endl << "Total Time for cholesky decomp: " << cd_time << " secs"
-// << endl;
+if(iproc == 0) {
+  std::cout << endl
+            << "Time to compute cholesky vectors: " << std::fixed << std::setprecision(2) << cd_time
+            << " secs" << endl;
+}
 
 update_sysdata(sys_data, tMO);
 
@@ -962,8 +969,10 @@ cd_t2   = std::chrono::high_resolution_clock::now();
 cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
 if(rank == 0) {
   std::cout << endl
-            << "Time for constructing MO-based CholVpr tensor: " << cd_time << " secs" << endl;
-  std::cout << "  --> Time for 2-step contraction: " << cvpr_time << " secs" << endl;
+            << "Time for constructing MO-based CholVpr tensor: " << std::fixed
+            << std::setprecision(2) << cd_time << " secs" << endl;
+  std::cout << "  --> Time for 2-step contraction: " << std::fixed << std::setprecision(2)
+            << cvpr_time << " secs" << endl;
 }
 
 #ifdef CD_SVD_THROTTLE
@@ -1085,7 +1094,8 @@ cd_t2   = std::chrono::high_resolution_clock::now();
 cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
 if(rank == 0)
   std::cout << std::endl
-            << "Time for CholVpr (GA->TAMM) conversion: " << cd_time << " secs" << endl;
+            << "Time for CholVpr (GA->TAMM) conversion: " << std::fixed << std::setprecision(2)
+            << cd_time << " secs" << endl;
 
 #if defined(USE_UPCXX)
 ga_ac.destroy();
@@ -1106,7 +1116,7 @@ Tensor<TensorType>::deallocate(CholVuv_opt);
 cd_t2   = std::chrono::high_resolution_clock::now();
 cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
 if(rank == 0)
-  std::cout << std::endl << "Time for computing CholVpr: " << cd_time << " secs" << std::endl;
+  std::cout << std::endl << "Time for computing CholVpr: " << std::fixed << std::setprecision(2) << cd_time << " secs" << std::endl;
 
 // Contraction 2
 cd_t1 = std::chrono::high_resolution_clock::now();
@@ -1124,7 +1134,7 @@ Scheduler{ec}
 cd_t2   = std::chrono::high_resolution_clock::now();
 cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
 if(rank == 0)
-  std::cout << std::endl << "Time for computing CholVpr: " << cd_time << " secs" << std::endl;
+  std::cout << std::endl << "Time for computing CholVpr: " << std::fixed << std::setprecision(2) << cd_time << " secs" << std::endl;
 
 #endif
 

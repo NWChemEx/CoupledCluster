@@ -496,8 +496,8 @@ hartree_fock_driver(ExecutionContext& ec, const string filename) {
     std::chrono::duration_cast<std::chrono::duration<double>>((hf_t2 - hf_t1)).count();
   if(rank == 0)
     std::cout << std::endl
-              << "Time taken for Hartree-Fock: " << std::setprecision(2) << hf_time << " secs"
-              << std::endl;
+              << "Time taken for Hartree-Fock: " << std::fixed << std::setprecision(2) << hf_time
+              << " secs" << std::endl;
 
   return std::make_tuple(sys_data, hf_energy, shells, shell_tile_map, C_AO, F_AO, C_beta_AO,
                          F_beta_AO, tAO, tAOt, scf_conv);
@@ -667,8 +667,8 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
     std::chrono::duration_cast<std::chrono::duration<double>>((cc_t2 - cc_t1)).count();
   if(rank == 0)
     std::cout << std::endl
-              << "Time to reconstruct V2: " << std::setprecision(2) << v2_time << " secs"
-              << std::endl;
+              << "Time to reconstruct V2: " << std::fixed << std::setprecision(2) << v2_time
+              << " secs" << std::endl;
 
   // Tensor<T>::deallocate(d_a2);
   return d_v2;
@@ -745,8 +745,8 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, T
 
   if(rank == 0)
     std::cout << std::endl
-              << "Total Time taken for Cholesky Decomposition: " << std::setprecision(2)
-              << cd_svd_time << " secs" << std::endl;
+              << "Total Time taken for Cholesky Decomposition: " << std::fixed
+              << std::setprecision(2) << cd_svd_time << " secs" << std::endl;
 
   Tensor<T>::deallocate(C_AO, F_AO);
   if(sys_data.is_unrestricted) Tensor<T>::deallocate(C_beta_AO, F_beta_AO);

@@ -766,7 +766,8 @@ void compute_initial_guess(ExecutionContext& ec, ScalapackInfo& scalapack_info,
   auto do_time = std::chrono::duration_cast<std::chrono::duration<double>>((do_t2 - do_t1)).count();
 
   if(rank == 0 && debug)
-    std::cout << "Time to compute Fock Matrix: " << do_time << " secs" << std::endl;
+    std::cout << "Time to compute Fock Matrix: " << std::fixed << std::setprecision(2) << do_time
+              << " secs" << std::endl;
 
   D_minbs_a.resize(0, 0);
   if(is_uhf) D_minbs_b.resize(0, 0);
@@ -823,7 +824,9 @@ void compute_initial_guess(ExecutionContext& ec, ScalapackInfo& scalapack_info,
   ec.pg().barrier();
   auto ig2    = std::chrono::high_resolution_clock::now();
   auto igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
-  if(rank == 0) std::cout << "Initial guess: " << igtime << " secs" << endl;
+  if(rank == 0)
+    std::cout << "Initial guess: " << std::fixed << std::setprecision(2) << igtime << " secs"
+              << endl;
 }
 
 // [WIP] guess by computing atom scf

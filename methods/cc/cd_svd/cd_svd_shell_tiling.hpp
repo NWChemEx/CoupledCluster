@@ -314,8 +314,8 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   double cd_mem_req       = sum_tensor_sizes(g_d_tamm, g_r_tamm, g_chol_tamm);
   auto   check_cd_mem_req = [&](const std::string mstep) {
     if(ec.print())
-      std::cout << "- CPU memory required for " << mstep << ": " << std::setprecision(2)
-                << cd_mem_req << " GiB" << std::endl;
+      std::cout << "- CPU memory required for " << mstep << ": " << std::fixed
+                << std::setprecision(2) << cd_mem_req << " GiB" << std::endl;
     check_memory_requirements(ec, cd_mem_req);
   };
   check_cd_mem_req("computing cholesky vectors");
@@ -326,6 +326,8 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   g_chol_tamm.set_dense();
 
   Tensor<TensorType>::allocate(&ec_dense, g_d_tamm, g_r_tamm, g_chol_tamm);
+  cd_tensor_zero(g_d_tamm);
+  cd_tensor_zero(g_chol_tamm);
 
   auto write_chol_vectors = [&]() {
     write_to_disk(g_d_tamm, diag_ao_file);
@@ -469,9 +471,9 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   auto cd_t2   = std::chrono::high_resolution_clock::now();
   auto cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
   if(rank == 0 && !cd_restart) {
-    std::cout << std::endl
-              << "- Time for computing the diagonal: " << std::setprecision(2) << cd_time << " secs"
-              << endl;
+    std::cout << endl
+              << "- Time for computing the diagonal: " << std::fixed << std::setprecision(2)
+              << cd_time << " secs" << endl;
   }
 
 #if !defined(USE_UPCXX)
@@ -494,7 +496,7 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
     cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
     if(rank == 0) {
       std::cout << "- [CD restart] Time for reading the diagonal and cholesky vectors: "
-                << std::setprecision(2) << cd_time << " secs" << endl;
+                << std::fixed << std::setprecision(2) << cd_time << " secs" << endl;
     }
   }
 #endif
@@ -856,15 +858,12 @@ g_d->destroy();
 
   auto cd_t4 = std::chrono::high_resolution_clock::now();
   cd_time    = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t4 - cd_t3)).count();
-  if(rank == 0)
-    std::cout << std::endl
-              << "- Time to compute cholesky vectors: " << std::setprecision(2) << cd_time
-              << " secs" << endl
+  if(rank == 0) {
+    std::cout << endl
+              << "- Time to compute cholesky vectors: " << std::fixed << std::setprecision(2)
+              << cd_time << " secs" << endl
               << endl;
-  // cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t4 - cd_t1)).count();
-  // if(rank == 0) std::cout << std::endl << "Total Time for cholesky decomp: " << cd_time << "
-  // secs"
-  // << endl;
+  }
 
   update_sysdata(sys_data, tMO);
 
@@ -968,10 +967,11 @@ sch.allocate(CholVpr_tamm)
 
   cd_t2   = std::chrono::high_resolution_clock::now();
   cd_time = std::chrono::duration_cast<std::chrono::duration<double>>((cd_t2 - cd_t1)).count();
-  if(rank == 0)
-    std::cout << std::endl
-              << "- Time for ao to mo transform: " << std::setprecision(2) << cd_time << " secs"
-              << std::endl;
+  if(rank == 0) {
+    std::cout << endl
+              << "- Time for ao to mo transform: " << std::fixed << std::setprecision(2) << cd_time
+              << " secs" << endl;
+  }
 
   if(rank == 0) {
     cout << endl << "    End Cholesky Decomposition" << endl;

@@ -156,7 +156,8 @@ void ccsd_driver() {
     std::chrono::duration_cast<std::chrono::duration<double>>((cc_t2 - cc_t1)).count();
   if(rank == 0)
     std::cout << std::endl
-              << "Time taken for Open Shell CCSD: " << ccsd_time << " secs" << std::endl;
+              << "Time taken for Open Shell CCSD: " << std::fixed << std::setprecision(2)
+              << ccsd_time << " secs" << std::endl;
 
   double printtol = ccsd_options.printtol;
   if(rank == 0 && debug) {

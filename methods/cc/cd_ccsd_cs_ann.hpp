@@ -353,17 +353,20 @@ cd_ccsd_cs_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     total_ccsd_mem += sum_tensor_sizes(d_r1s[ri], d_r2s[ri], d_t1s[ri], d_t2s[ri]);
 
   // Intermediates
-  double total_ccsd_mem_tmp =
-    sum_tensor_sizes(_a02V, _a007V) +
-    CCSE_Tensors<T>::sum_tensor_sizes_list(_a01, _a04, _a05, _a06, _a001, _a004, _a006, _a008,
-                                           _a009, _a017, _a019, _a020, _a021, _a022);
+  const double v4int_size         = CCSE_Tensors<T>::sum_tensor_sizes_list(_a022);
+  double       total_ccsd_mem_tmp = sum_tensor_sizes(_a02V, _a007V) + v4int_size +
+                              CCSE_Tensors<T>::sum_tensor_sizes_list(_a01, _a04, _a05, _a06, _a001,
+                                                                     _a004, _a006, _a008, _a009,
+                                                                     _a017, _a019, _a020, _a021);
 
   if(!ccsd_restart) total_ccsd_mem += total_ccsd_mem_tmp;
 
   if(ec.print()) {
     std::cout << std::endl
               << "Total CPU memory required for Closed Shell Cholesky CCSD calculation: "
-              << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
+              << std::fixed << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
+    std::cout << " (V^4 intermediate size: " << std::fixed << std::setprecision(2) << v4int_size
+              << " GiB)" << std::endl;
   }
   check_memory_requirements(ec, total_ccsd_mem);
 

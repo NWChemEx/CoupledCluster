@@ -268,12 +268,12 @@ void ccsd_t_driver() {
     if(rank == 0) {
       if(is_rhf)
         std::cout << std::endl
-                  << "Time taken for Closed Shell Cholesky CCSD: " << std::setprecision(2)
-                  << ccsd_time << " secs" << std::endl;
+                  << "Time taken for Closed Shell Cholesky CCSD: " << std::fixed
+                  << std::setprecision(2) << ccsd_time << " secs" << std::endl;
       else
         std::cout << std::endl
-                  << "Time taken for Open Shell Cholesky CCSD: " << std::setprecision(2)
-                  << ccsd_time << " secs" << std::endl;
+                  << "Time taken for Open Shell Cholesky CCSD: " << std::fixed
+                  << std::setprecision(2) << ccsd_time << " secs" << std::endl;
     }
 
     double printtol = ccsd_options.printtol;
@@ -377,7 +377,7 @@ void ccsd_t_driver() {
 
     double total_ccsd_t_mem = ccsd_t_mem + total_extra_buf_mem + total_cache_mem;
     if(rank == 0) {
-      std::cout << std::string(70, '-') << std::setprecision(2) << std::endl;
+      std::cout << std::string(70, '-') << std::fixed << std::setprecision(2) << std::endl;
       std::cout << "Total CPU memory required for (T) calculation = " << total_ccsd_t_mem << " GiB"
                 << std::endl;
       std::cout << " -- memory required for the input tensors: " << ccsd_t_mem << " GiB"

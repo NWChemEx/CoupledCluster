@@ -72,7 +72,8 @@ int main(int argc, char* argv[]) {
 
   if(rank == 0)
     std::cout << std::endl
-              << "Total Time taken for Hartree-Fock: " << hf_time << " secs" << std::endl;
+              << "Total Time taken for Hartree-Fock: " << std::fixed << std::setprecision(2)
+              << hf_time << " secs" << std::endl;
 
   tamm::finalize();
 

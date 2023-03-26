@@ -759,8 +759,8 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       std::cout << std::endl << std::endl;
       std::cout << " SCF iterations" << endl;
       std::cout << std::string(65, '-') << endl;
-      std::string sph = " Iter     Energy          E-Diff        RMSD          Time(s)";
-      if(scf_conv) sph = " Iter     Energy          E-Diff          Time(s)";
+      std::string sph = " Iter     Energy            E-Diff       RMSD          Time(s)";
+      if(scf_conv) sph = " Iter     Energy            E-Diff       Time(s)";
       std::cout << sph << endl;
       std::cout << std::string(65, '-') << endl;
     }

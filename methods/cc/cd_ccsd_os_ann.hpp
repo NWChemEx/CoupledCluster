@@ -537,17 +537,20 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     total_ccsd_mem += sum_tensor_sizes(d_r1s[ri], d_r2s[ri], d_t1s[ri], d_t2s[ri]);
 
   // Intermediates
-  double total_ccsd_mem_tmp =
-    sum_tensor_sizes(_a02V, _a007V) +
+  const double v4int_size = CCSE_Tensors<T>::sum_tensor_sizes_list(_a022);
+  double       total_ccsd_mem_tmp =
+    sum_tensor_sizes(_a02V, _a007V) + v4int_size +
     CCSE_Tensors<T>::sum_tensor_sizes_list(i0_t2_tmp, _a01, _a04, _a05, _a06, _a001, _a004, _a006,
-                                           _a008, _a009, _a017, _a019, _a020, _a021, _a022);
+                                           _a008, _a009, _a017, _a019, _a020, _a021);
 
   if(!ccsd_restart) total_ccsd_mem += total_ccsd_mem_tmp;
 
   if(ec.print()) {
     std::cout << std::endl
               << "Total CPU memory required for Open Shell Cholesky CCSD calculation: "
-              << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
+              << std::fixed << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
+    std::cout << " (V^4 intermediate size: " << std::fixed << std::setprecision(2) << v4int_size
+              << " GiB)" << std::endl;
   }
   check_memory_requirements(ec, total_ccsd_mem);
 
@@ -603,7 +606,8 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     auto       f1_rctime =
       std::chrono::duration_cast<std::chrono::duration<double>>((timer_end - timer_start)).count();
     if(ec.print())
-      std::cout << "Time to reconstruct Fock matrix: " << f1_rctime << " secs" << std::endl;
+      std::cout << "Time to reconstruct Fock matrix: " << std::fixed << std::setprecision(2)
+                << f1_rctime << " secs" << std::endl;
   }
 
   print_ccsd_header(ec.print());

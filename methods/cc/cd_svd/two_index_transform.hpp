@@ -245,7 +245,9 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
   auto hf_t2   = std::chrono::high_resolution_clock::now();
   auto hf_time = std::chrono::duration_cast<std::chrono::duration<double>>((hf_t2 - hf_t1)).count();
   if(rank == 0) {
-    std::cout << std::endl << "Time taken for Fao->Fmo transform: " << hf_time << " secs" << endl;
+    std::cout << std::endl
+              << "Time taken for Fao->Fmo transform: " << std::fixed << std::setprecision(2)
+              << hf_time << " secs" << endl;
     cout << std::endl << "-----------------------------------------------------" << endl;
   }
 }
