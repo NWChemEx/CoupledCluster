@@ -97,17 +97,29 @@
     "convd": 1e-09,
     "diis_hist": 12,
     "tilesize": 30,
-    "charge": 1
+    "charge": 1,
+    "restart": false,
+    "noscf": false
   },
   "CD": {
-    "diagtol": 1e-06
+    "diagtol": 1e-05
   },
   "CC": {
     "CCSD(T)": {
       "skip_ccsd": false,
       "ccsdt_tilesize": 40
     },
-    "threshold": 1e-8,
-    "debug": false
+    "threshold": 1e-6,
+    "writet": true,
+    "DLPNO": {
+      "df_basisset": "cc-pvtz-ri",
+      "localize": true,
+      "TCutPairs": 1.0e-3,
+      "TCutPNO": 1.0e-6,
+      "TCutEN": 0.97,
+      "TCutPre": 1.0e-3,
+      "TCutDOij": 1.0e-7,
+      "TCutDOPre": 3.0e-2
+    }
   }
 }

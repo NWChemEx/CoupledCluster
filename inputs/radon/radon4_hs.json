@@ -68,14 +68,14 @@
     "SCF": {
       "tilesize": 30,
       "restart": false,
-      "diis_hist": 14,
+      "diis_hist": 10,
       "tol_int": 1e-16,
       "tol_lindep": 1e-06,
       "conve": 1e-7,
       "convd": 1e-6,
       "charge": 1,
       "multiplicity": 6,
-      "alpha": 0.5,
+      "alpha": 0.95,
       "scf_type": "unrestricted"
     },
     "CD": {

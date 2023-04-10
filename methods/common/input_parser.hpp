@@ -204,7 +204,7 @@ class CDOptions: public Options {
 public:
   CDOptions() = default;
   CDOptions(Options o): Options(o) {
-    diagtol      = 1e-6;
+    diagtol      = 1e-5;
     write_vcount = 5000;
     // At most 8*ao CholVec's. For vast majority cases, this is way
     // more than enough. For very large basis, it can be increased.

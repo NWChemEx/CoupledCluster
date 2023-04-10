@@ -55,14 +55,14 @@
   "SCF": {
     "tilesize": 30,
     "restart": false,
-    "diis_hist": 14,
+    "diis_hist": 10,
     "tol_int": 1e-16,
     "tol_lindep": 1e-06,    
-    "conve": 1e-7,
-    "convd": 1e-6,
+    "conve": 1e-9,
+    "convd": 2e-8,
     "charge": 3,    
     "multiplicity": 2,
-    "alpha": 0.2,
+    "alpha": 0.95,
     "scf_type": "unrestricted"
   },
   "CD": {
@@ -74,7 +74,6 @@
     "readt": false,
     "writet": true,
     "ndiis": 6,
-    "lshift": 0.1,
     "CCSD(T)": {
       "skip_ccsd": false,
       "ccsdt_tilesize": 40

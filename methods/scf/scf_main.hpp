@@ -80,8 +80,6 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     if(!is_spherical)
       std::cout << "WARNING: molden interface is not tested with gaussian_type:cartesian"
                 << std::endl;
-    if(!is_rhf)
-      tamm_terminate("ERROR: molden restart is currently only supported for RHF calculations!");
   }
 
   auto hf_t1 = std::chrono::high_resolution_clock::now();
@@ -140,8 +138,8 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
   // If using molden file, read the exponents and coefficients and renormalize shells.
   // This modifies the existing basisset object.
   if(molden_exists && molden_file_valid) {
-    read_basis_molden(sys_data, shells);
-    renormalize_libint_shells(sys_data, shells);
+    shells = read_basis_molden(sys_data, shells);
+    shells = renormalize_libint_shells(sys_data, shells);
     if(is_spherical) shells.set_pure(true);
     else shells.set_pure(false); // use cartesian gaussians
   }

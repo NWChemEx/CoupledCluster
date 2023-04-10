@@ -444,13 +444,20 @@ void reorder_molden_orbitals(const bool is_spherical, std::vector<AtomInfo>& ato
   } // reorder cols
 }
 
-void renormalize_libint_shells(const SystemData& sys_data, libint2::BasisSet& shells) {
+// TODO: is this needed? - currently does not make a difference
+libint2::BasisSet renormalize_libint_shells(const SystemData& sys_data, libint2::BasisSet& shells) {
   using libint2::math::df_Kminus1;
   using std::pow;
-  const auto sqrt_Pi_cubed = double{5.56832799683170784528481798212};
-#if 0 // TODO: Fix immutable basisset objects
-  for (auto &s: shells) {
+  const auto                  sqrt_Pi_cubed = double{5.56832799683170784528481798212};
+  std::vector<libint2::Shell> rshells(shells.size());
+  size_t                      sid = 0;
+  for(auto it = shells.begin(); it != shells.end(); it++) {
+    rshells[sid] = *it;
+    sid++;
+  }
+  for(auto& s: rshells) {
     const auto np = s.nprim();
+#if 0 // TODO: Doesn't work - is renormalization required?
     for(auto& c: s.contr) {
       EXPECTS(c.l <= 15); 
       for(auto p=0ul; p!=np; ++p) {
@@ -482,7 +489,6 @@ void renormalize_libint_shells(const SystemData& sys_data, libint2::BasisSet& sh
       }
 
     }
-
     // update max log coefficients
     s.max_ln_coeff.resize(np);
     for(auto p=0ul; p!=np; ++p) {
@@ -492,9 +498,12 @@ void renormalize_libint_shells(const SystemData& sys_data, libint2::BasisSet& sh
       }
       s.max_ln_coeff[p] = max_ln_c;
     }
-
-  } //shells
 #endif
+
+  } // shells
+  libint2::BasisSet result{rshells};
+
+  return result;
 }
 
 void read_geom_molden(const SystemData& sys_data, std::vector<libint2::Atom>& atoms) {
@@ -515,7 +524,8 @@ void read_geom_molden(const SystemData& sys_data, std::vector<libint2::Atom>& at
   }
 }
 
-void read_basis_molden(const SystemData& sys_data, libint2::BasisSet& shells) {
+// TODO: is this needed? - currently does not make a difference
+libint2::BasisSet read_basis_molden(const SystemData& sys_data, libint2::BasisSet& shells) {
   // s_type = 0, p_type = 1, d_type = 2,
   // f_type = 3, g_type = 4
   /*For spherical
@@ -531,6 +541,13 @@ void read_basis_molden(const SystemData& sys_data, libint2::BasisSet& shells) {
 
   while(line.find("GTO") == std::string::npos) { std::getline(is, line); } // end basis section
 
+  std::vector<libint2::Shell> rshells(shells.size());
+  size_t                      sid = 0;
+  for(auto it = shells.begin(); it != shells.end(); it++) {
+    rshells[sid] = *it;
+    sid++;
+  }
+
   bool basis_parse = true;
   int  atom_i = 0, shell_i = 0;
   while(basis_parse) {
@@ -544,23 +561,26 @@ void read_basis_molden(const SystemData& sys_data, libint2::BasisSet& shells) {
       if(std::stoi(expc[0]) == atom_i + 1 && std::stoi(expc[1]) == 0) { atom_i++; } // shell_i=0;
     }
 
-    // TODO: Fix immutable basisset objects
-    // else if (expc[0]=="s" || expc[0]=="p" || expc[0]=="d" || expc[0]=="f" || expc[0]=="g") {
-    //   for(auto np=0;np<std::stoi(expc[1]);np++){
-    //     std::getline(is, line);
-    //     std::istringstream iss(line);
-    //     std::vector<std::string> expc_val{std::istream_iterator<std::string>{iss},
-    //                                   std::istream_iterator<std::string>{}};
-    //     shells[shell_i].alpha[np] = std::stod(expc_val[0]);
-    //     shells[shell_i].contr[0].coeff[np] = std::stod(expc_val[1]);
-    //   } //nprims for shell_i
-    //   shell_i++;
-    // }
+    else if(expc[0] == "s" || expc[0] == "p" || expc[0] == "d" || expc[0] == "f" ||
+            expc[0] == "g") {
+      for(auto np = 0; np < std::stoi(expc[1]); np++) {
+        std::getline(is, line);
+        std::istringstream       iss(line);
+        std::vector<std::string> expc_val{std::istream_iterator<std::string>{iss},
+                                          std::istream_iterator<std::string>{}};
+        rshells[shell_i].alpha[np]          = std::stod(expc_val[0]);
+        rshells[shell_i].contr[0].coeff[np] = std::stod(expc_val[1]);
+      } // nprims for shell_i
+      shell_i++;
+    }
     else if(line.find("[5D]") != std::string::npos) basis_parse = false;
     else if(line.find("[9G]") != std::string::npos) basis_parse = false;
     else if(line.find("[MO]") != std::string::npos) basis_parse = false;
 
   } // end basis parse
+
+  libint2::BasisSet result{rshells};
+  return result;
 }
 
 template<typename T>
@@ -574,11 +594,15 @@ void read_molden(const SystemData& sys_data, libint2::BasisSet& shells,
 
   size_t N      = C_alpha.rows();
   size_t Northo = C_alpha.cols();
-  Matrix eigenvecs(N, Northo);
-  eigenvecs.setZero();
 
   const bool is_spherical = (scf_options.gaussian_type == "spherical");
-  const bool is_uhf       = (sys_data.is_unrestricted);
+  const bool is_rhf       = sys_data.is_restricted;
+  const bool is_uhf       = sys_data.is_unrestricted;
+
+  Matrix eigenvecs(N, Northo);
+  eigenvecs.setZero();
+  Matrix eigenvecs_beta(N, Northo);
+  if(is_uhf) eigenvecs_beta.setZero();
 
   auto         atoms  = sys_data.options_map.options.atoms;
   const size_t natoms = atoms.size();
@@ -601,8 +625,9 @@ void read_molden(const SystemData& sys_data, libint2::BasisSet& shells,
 
   while(line.find("[MO]") == std::string::npos) { std::getline(is, line); } // end basis section
 
-  bool   mo_end = false;
-  size_t i      = 0;
+  bool   mo_end       = false;
+  bool   mo_end_alpha = false;
+  size_t i            = 0;
   // size_t kb = 0;
   while(!mo_end) {
     std::getline(is, line);
@@ -639,19 +664,27 @@ void read_molden(const SystemData& sys_data, libint2::BasisSet& shells,
     if(mo_end) {
       for(size_t j = 0; j < N; j++) {
         std::getline(is, line);
-        eigenvecs(j, i) = std::stod(read_option(line));
+        if(!mo_end_alpha) eigenvecs(j, i) = std::stod(read_option(line));
+        else eigenvecs_beta(j, i) = std::stod(read_option(line));
       }
       mo_end = false;
       i++;
     }
 
-    if(i == Northo) mo_end = true;
+    if(i == Northo) {
+      if(is_rhf) mo_end = true;
+      else if(is_uhf) {
+        if(!mo_end_alpha) {
+          i            = 0;
+          mo_end_alpha = true;
+        }
+        else mo_end = true;
+      }
+    }
   }
 
-  const bool is_rhf = sys_data.is_restricted;
   reorder_molden_orbitals<T>(is_spherical, atominfo, eigenvecs, C_alpha, false);
-  // TODO: WIP
-  //  if(is_uhf) reorder_molden_orbitals<T>(is_spherical, atominfo, eigenvecs, C_beta);
+  if(is_uhf) reorder_molden_orbitals<T>(is_spherical, atominfo, eigenvecs_beta, C_beta, false);
 
   if(is_rhf) {
     n_occ_beta = n_occ_alpha;

@@ -7,6 +7,30 @@ Installation
 
 - [Build Instructions](https://tamm.readthedocs.io/en/latest/install.html)
 
+Build instructions for a quick start
+=====================================
+## Step 1
+```
+git clone https://github.com/NWChemEx-Project/TAMM.git
+cd TAMM && mkdir build && cd build
+```
+- ### A detailed list of the cmake build options available are listed [here](https://tamm.readthedocs.io/en/latest/install.html)
+```
+CC=gcc CXX=g++ FC=gfortran cmake -DCMAKE_INSTALL_PREFIX=<exachem-install-path> -DBUILD_LIBINT=ON -DUSE_GAUXC=ON ..
+make -j4 install
+```
+
+## Step 2
+```
+git clone https://github.com/ExaChem/exachem.git
+cd exachem && mkdir build && cd build
+CC=gcc CXX=g++ FC=gfortran cmake -DCMAKE_INSTALL_PREFIX=<exachem-install-path> -DBUILD_LIBINT=ON -DUSE_GAUXC=ON ..
+make -j4
+```
+
+## `NOTE:` The cmake configure line in Steps 1 and 2 should be the same.
+
+
 Building via Spack
 ------------------
 ```

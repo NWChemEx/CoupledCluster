@@ -54,7 +54,7 @@
     "ccsd_maxiter": 100,
     "readt": false,
     "writet": true,
-    "ndiis": 4,
+    "ndiis": 5,
     "CCSD(T)": {
       "skip_ccsd": false,
       "ccsdt_tilesize": 40
