@@ -325,9 +325,9 @@ public:
     TCutDOPre     = 3e-2;
 
     ngpu           = 0;
-    cache_size     = 32;
+    cache_size     = 8;
     skip_ccsd      = false;
-    ccsdt_tilesize = 28;
+    ccsdt_tilesize = 32;
 
     eom_nroots    = 1;
     eom_threshold = 1e-6;
