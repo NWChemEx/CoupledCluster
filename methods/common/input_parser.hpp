@@ -324,7 +324,6 @@ public:
     TCutDOij      = 1e-5;
     TCutDOPre     = 3e-2;
 
-    ngpu           = 0;
     cache_size     = 8;
     skip_ccsd      = false;
     ccsdt_tilesize = 32;
@@ -409,7 +408,6 @@ public:
   double h_max;    // max time-step factor
 
   // CCSD(T)
-  int  ngpu;
   bool skip_ccsd;
   int  cache_size;
   int  ccsdt_tilesize;
@@ -468,11 +466,9 @@ public:
     std::cout << std::defaultfloat;
     cout << endl << "CCSD Options" << endl;
     cout << "{" << endl;
-    if(ngpu > 0) {
-      cout << " ngpu                 = " << ngpu << endl;
-      cout << " cache_size           = " << cache_size << endl;
-      cout << " ccsdt_tilesize       = " << ccsdt_tilesize << endl;
-    }
+    cout << " cache_size           = " << cache_size << endl;
+    cout << " ccsdt_tilesize       = " << ccsdt_tilesize << endl;
+
     cout << " ndiis                = " << ndiis << endl;
     cout << " printtol             = " << printtol << endl;
     cout << " threshold            = " << threshold << endl;
@@ -827,7 +823,6 @@ parse_json(json& jinput) {
   parse_option<std::vector<int>>(ccsd_options.doubles_opt_eqns, jdlpno, "doubles_opt_eqns");
 
   json jccsd_t = jcc["CCSD(T)"];
-  parse_option<int>(ccsd_options.ngpu          , jccsd_t, "ngpu");
   parse_option<bool>(ccsd_options.skip_ccsd    , jccsd_t, "skip_ccsd");
   parse_option<int>(ccsd_options.cache_size    , jccsd_t, "cache_size");
   parse_option<int>(ccsd_options.ccsdt_tilesize, jccsd_t, "ccsdt_tilesize");

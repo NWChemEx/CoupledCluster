@@ -67,8 +67,7 @@
     
     "CD": {
         "debug": false,
-        "diagtol": 1e-6,
-        "max_cvecs": 12,
+        "diagtol": 1e-5,
         "write_vcount": 5000
     },
     
@@ -97,10 +96,9 @@
         "ext_data_path": "",
     
         "CCSD(T)": {
-          "ngpu": 0,
-          "cache_size": 32,
+          "cache_size": 8,
           "skip_ccsd": false,
-          "ccsdt_tilesize": 28
+          "ccsdt_tilesize": 32
         },
     
         "DLPNO": {

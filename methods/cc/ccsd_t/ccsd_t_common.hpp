@@ -6,7 +6,6 @@
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
 #include "tamm/gpu_memory_pool.hpp"
-// #include "tamm/gpu_streams.hpp"
 using tamm::gpuEvent_t;
 using tamm::gpuStream_t;
 #endif
@@ -54,7 +53,7 @@ typedef long Integer;
 #define TG_MIN(x, y) ((x) < (y) ? (x) : (y))
 
 void        initMemModule();
-std::string check_memory_req(const int nDevices, const int cc_t_ts, const int nbf);
+std::string check_memory_req(const int cc_t_ts, const int nbf);
 
 void* getGpuMem(size_t bytes);
 void* getHostMem(size_t bytes);

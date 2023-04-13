@@ -229,9 +229,6 @@
         "CCSD(T)": {
           "type": "object",
           "properties": {
-            "ngpu": {
-              "type": "integer"
-            },
             "ccsdt_tilesize": {
               "type": "integer"
             },

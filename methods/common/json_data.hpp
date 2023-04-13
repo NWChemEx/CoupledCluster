@@ -181,7 +181,6 @@ inline void write_json_data(SystemData& sys_data, const std::string cmodule) {
     // CCSD options
     results["input"][cmodule]["tilesize"]  = ccsd.tilesize;
     results["input"][cmodule]["itilesize"] = ccsd.itilesize;
-    // results["input"][cmodule]["ngpu"] = ccsd.ngpu;
     results["input"][cmodule]["ndiis"]         = ccsd.ndiis;
     results["input"][cmodule]["readt"]         = str_bool(ccsd.readt);
     results["input"][cmodule]["writet"]        = str_bool(ccsd.writet);
@@ -191,7 +190,6 @@ inline void write_json_data(SystemData& sys_data, const std::string cmodule) {
 
   if(cmodule == "CCSD(T)" || cmodule == "CCSD_T") {
     // CCSD(T) options
-    results["input"][cmodule]["ngpu"]           = ccsd.ngpu;
     results["input"][cmodule]["skip_ccsd"]      = ccsd.skip_ccsd;
     results["input"][cmodule]["ccsdt_tilesize"] = ccsd.ccsdt_tilesize;
   }
