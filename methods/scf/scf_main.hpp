@@ -124,7 +124,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
   else shells.set_pure(false); // use cartesian gaussians
 
   const size_t N      = shells.nbf();
-  auto         nnodes = exc.num_nodes();
+  auto         nnodes = exc.nnodes();
 
   sys_data.nbf      = N;
   sys_data.nbf_orig = N;
@@ -145,8 +145,8 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
   }
 
 #if SCF_THROTTLE_RESOURCES
-  auto [t_nnodes, hf_nnodes, ppn, hf_nranks, sca_nnodes, sca_nranks] =
-    get_hf_nranks(scf_options, N);
+  ProcGroupData pgdata = get_spg_data(exc, N, -1, 30, scf_options.nnodes, -1, 4);
+  auto [t_nnodes, hf_nnodes, ppn, hf_nranks, sca_nnodes, sca_nranks] = pgdata.unpack();
 
 #if defined(USE_UPCXX)
   bool         in_new_team = (rank < hf_nranks);
@@ -166,33 +166,28 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 #endif
 
 #if defined(USE_SCALAPACK)
-  int lranks[sca_nranks];
-  for(int i = 0; i < sca_nranks; i++) lranks[i] = i;
-  MPI_Group sca_group;
-  MPI_Group_incl(wgroup, sca_nranks, lranks, &sca_group);
-  MPI_Comm scacomm;
-  MPI_Comm_create(gcomm, sca_group, &scacomm);
+  MPI_Comm scacomm = get_scalapack_comm(exc, sca_nranks);
 #endif
 #endif
 
   if(rank == 0) {
 #if defined(USE_UPCXX)
     cout << std::endl
-         << "Number of nodes, mpi ranks per node provided: " << nnodes << ", "
+         << "Number of nodes, processes per node provided: " << nnodes << ", "
          << (int) (gcomm->rank_n() / nnodes) << endl;
 #else
     cout << std::endl
-         << "Number of nodes, mpi ranks per node provided: " << nnodes << ", "
+         << "Number of nodes, processes per node provided: " << nnodes << ", "
          << GA_Cluster_nprocs(0) << endl;
 #endif
 
 #if SCF_THROTTLE_RESOURCES
-    cout << "Number of nodes, mpi ranks per node used for SCF calculation: " << hf_nnodes << ", "
+    cout << "Number of nodes, processes per node used for SCF calculation: " << hf_nnodes << ", "
          << ppn << endl;
 #endif
 #if defined(USE_SCALAPACK)
-    cout << "Number of nodes, mpi ranks per node, total ranks used for Scalapack: " << sca_nnodes
-         << ", " << sca_nranks / sca_nnodes << ", " << sca_nranks << endl;
+    cout << "Number of nodes, processes per node, total processes used for Scalapack operations: "
+         << sca_nnodes << ", " << sca_nranks / sca_nnodes << ", " << sca_nranks << endl;
 #endif
     scf_options.print();
   }
@@ -303,6 +298,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 
   const bool scf_conv = restart && scf_options.noscf;
   const int  max_hist = sys_data.options_map.scf_options.diis_hist;
+  bool       is_conv  = true;
 
   scf_restart_test(exc, sys_data, filename, restart, files_prefix);
 
@@ -313,8 +309,6 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 
 #if SCF_THROTTLE_RESOURCES
   if(rank < hf_nranks) {
-    ScalapackInfo scalapack_info;
-
 #if defined(USE_UPCXX)
     ProcGroup pg = ProcGroup::create_coll(*hf_comm);
 #else
@@ -328,74 +322,11 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 #endif
     // ProcGroup pg_l = ProcGroup::create_coll(MPI_COMM_SELF);
     // ExecutionContext ec_l{pg_l, DistributionKind::nw, MemoryManagerKind::local};
+
+    ScalapackInfo scalapack_info;
 #if defined(USE_SCALAPACK)
-#if defined(USE_UPCXX)
-    abort(); // Not supported with UPC++
+    setup_scalapack_info(sys_data, scalapack_info, scacomm);
 #endif
-    scalapack_info.comm = scacomm;
-    if(scacomm != MPI_COMM_NULL) {
-      auto blacs_setup_st = std::chrono::high_resolution_clock::now();
-      // Sanity checks
-      scalapack_info.npr   = scf_options.scalapack_np_row;
-      scalapack_info.npc   = scf_options.scalapack_np_col;
-      int scalapack_nranks = scalapack_info.npr * scalapack_info.npc;
-
-      scalapack_info.pg = ProcGroup::create_coll(scacomm);
-      scalapack_info.ec =
-        ExecutionContext{scalapack_info.pg, DistributionKind::dense, MemoryManagerKind::ga};
-
-      int sca_world_size = scalapack_info.pg.size().value();
-
-      // Default to square(ish) grid
-      if(scalapack_nranks == 0) {
-        int64_t npr = std::sqrt(sca_world_size);
-        int64_t npc = sca_world_size / npr;
-        while(npr * npc != sca_world_size) {
-          npr--;
-          npc = sca_world_size / npr;
-        }
-        scalapack_nranks   = sca_world_size;
-        scalapack_info.npr = npr;
-        scalapack_info.npc = npc;
-      }
-
-      EXPECTS(sca_world_size >= scalapack_nranks);
-
-      if(not scalapack_nranks) scalapack_nranks = sca_world_size;
-      std::vector<int64_t> scalapack_ranks(scalapack_nranks);
-      std::iota(scalapack_ranks.begin(), scalapack_ranks.end(), 0);
-      scalapack_info.scalapack_nranks = scalapack_nranks;
-
-      if(scalapack_info.pg.rank() == 0) {
-        std::cout << "scalapack_nranks = " << scalapack_nranks << std::endl;
-        std::cout << "scalapack_np_row = " << scalapack_info.npr << std::endl;
-        std::cout << "scalapack_np_col = " << scalapack_info.npc << std::endl;
-      }
-
-      int& mb_ = scf_options.scalapack_nb;
-      if(mb_ > N / scalapack_info.npr) {
-        mb_                                           = N / scalapack_info.npr;
-        sys_data.options_map.scf_options.scalapack_nb = mb_;
-        if(scalapack_info.pg.rank() == 0)
-          std::cout << "WARNING: Resetting scalapack block size (scalapack_nb) to: " << mb_
-                    << std::endl;
-      }
-
-      scalapack_info.blacs_grid = std::make_unique<blacspp::Grid>(
-        scalapack_info.pg.comm(), scalapack_info.npr, scalapack_info.npc, scalapack_ranks.data(),
-        scalapack_info.npr);
-      scalapack_info.blockcyclic_dist = std::make_unique<scalapackpp::BlockCyclicDist2D>(
-        *scalapack_info.blacs_grid, mb_, mb_, 0, 0);
-
-      auto blacs_setup_en = std::chrono::high_resolution_clock::now();
-
-      std::chrono::duration<double> blacs_time = blacs_setup_en - blacs_setup_st;
-
-      if(scalapack_info.pg.rank() == 0)
-        std::cout << std::fixed << std::setprecision(2) << std::endl
-                  << "Time for BLACS setup: " << blacs_time.count() << " secs" << std::endl;
-    }
-#endif // USE_SCALAPACK
 
 #if defined(USE_GAUXC)
     /*** =========================== ***/
@@ -717,9 +648,8 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     /*** =========================== ***/
     /*** main iterative loop         ***/
     /*** =========================== ***/
-    double rmsd    = 1.0;
-    double ediff   = 0.0;
-    bool   is_conv = true;
+    double rmsd  = 1.0;
+    double ediff = 0.0;
 
     if(rank == 0) {
       eigen_to_tamm_tensor(ttensors.D_tamm, etensors.D);
@@ -1017,12 +947,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       cout << "done." << endl;
     }
 
-    if(!is_conv) {
-      ec.pg().barrier();
-      tamm_terminate("Please check SCF input parameters");
-    }
-
-    if(rank == 0 && scf_options.mulliken_analysis) {
+    if(rank == 0 && scf_options.mulliken_analysis && is_conv) {
       Matrix S = tamm_to_eigen_matrix(ttensors.S1);
       print_mulliken(options_map, shells, etensors.D, etensors.D_beta, S, is_uhf);
     }
@@ -1086,6 +1011,9 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 
   // C,F1 is not allocated for ranks > hf_nranks
   exc.pg().barrier();
+  exc.pg().broadcast(&is_conv, 0);
+
+  if(!is_conv) { tamm_terminate("Please check SCF input parameters"); }
 
   // F, C are not deallocated.
   sys_data.n_occ_alpha = sys_data.nelectrons_alpha;

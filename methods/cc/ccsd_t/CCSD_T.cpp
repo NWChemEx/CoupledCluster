@@ -58,7 +58,7 @@ void ccsd_t_driver() {
 
   int nsranks = sys_data.nbf / 15;
   if(nsranks < 1) nsranks = 1;
-  int ga_cnn = ec.num_nodes();
+  int ga_cnn = ec.nnodes();
   if(nsranks > ga_cnn) nsranks = ga_cnn;
   nsranks = nsranks * GA_Cluster_nprocs(0);
   int subranks[nsranks];
@@ -491,10 +491,9 @@ void ccsd_t_driver() {
 
   double ccsd_t_time = 0, total_t_time = 0;
   // cc_t1 = std::chrono::high_resolution_clock::now();
-  std::tie(energy1, energy2, ccsd_t_time, total_t_time) =
-    ccsd_t_fused_driver_new<T>(sys_data, ec, k_spin, MO1, t_d_t1, t_d_t2, v2tensors, p_evl_sorted,
-                               hf_energy + corr_energy, is_restricted, cache_s1t,
-                               cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v, seq_h3b);
+  std::tie(energy1, energy2, ccsd_t_time, total_t_time) = ccsd_t_fused_driver_new<T>(
+    sys_data, ec, k_spin, MO1, t_d_t1, t_d_t2, v2tensors, p_evl_sorted, hf_energy + corr_energy,
+    is_restricted, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v, seq_h3b);
 
   // cc_t2 = std::chrono::high_resolution_clock::now();
   // auto ccsd_t_time =
@@ -529,8 +528,8 @@ void ccsd_t_driver() {
     // std::cout << "--------------------------------------------------------------------" <<
     // std::endl;
     ccsd_t_fused_driver_calculator_ops<T>(sys_data, ec, k_spin, MO1, p_evl_sorted,
-                                          hf_energy + corr_energy, is_restricted,
-                                          total_num_ops, seq_h3b);
+                                          hf_energy + corr_energy, is_restricted, total_num_ops,
+                                          seq_h3b);
     // std::cout << "--------------------------------------------------------------------" <<
     // std::endl;
   }

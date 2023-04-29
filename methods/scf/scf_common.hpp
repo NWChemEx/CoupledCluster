@@ -4,16 +4,8 @@
 #include <cctype>
 
 #include "common/cutils.hpp"
-#include "common/json_data.hpp"
 #include "common/misc.hpp"
 #include "common/molden.hpp"
-
-#if defined(USE_SCALAPACK)
-#include <blacspp/grid.hpp>
-#include <scalapackpp/block_cyclic_matrix.hpp>
-#include <scalapackpp/eigenvalue_problem/sevp.hpp>
-#include <scalapackpp/pblas/gemm.hpp>
-#endif
 
 #if defined(USE_GAUXC)
 #include <gauxc/xc_integrator.hpp>
@@ -153,22 +145,6 @@ struct DFFockEngine {
   DFFockEngine(const libint2::BasisSet& _obs, const libint2::BasisSet& _dfbs):
     obs(_obs), dfbs(_dfbs) {}
 };
-
-#if defined(USE_SCALAPACK)
-struct ScalapackInfo {
-  int64_t                                         npr{}, npc{}, scalapack_nranks{};
-  bool                                            use_scalapack{true};
-  MPI_Comm                                        comm;
-  tamm::ProcGroup                                 pg;
-  tamm::ExecutionContext                          ec;
-  std::unique_ptr<blacspp::Grid>                  blacs_grid;
-  std::unique_ptr<scalapackpp::BlockCyclicDist2D> blockcyclic_dist;
-};
-#else
-struct ScalapackInfo {
-  bool use_scalapack{false};
-};
-#endif
 
 Matrix compute_soad(const std::vector<libint2::Atom>& atoms);
 
@@ -465,53 +441,6 @@ void t2e_hf_helper(const ExecutionContext& ec, tamm::Tensor<T>& ttensor, Matrix&
   // //ec.pg().barrier(); //TODO
   // if(rank == 0) std::cout << std::endl << "Time for tamm to eigen " << pstr << " : " << hf_time
   // << " secs" << endl;
-}
-
-inline std::tuple<int, int, int, int, int, int> get_hf_nranks(SCFOptions   scf_options,
-                                                              const size_t N) {
-#ifdef USE_UPCXX
-  auto ppn = upcxx::local_team().rank_n();
-  assert(upcxx::world().rank_n() % ppn == 0);
-  auto nnodes = upcxx::world().rank_n() / ppn;
-#else
-  auto nnodes     = GA_Cluster_nnodes();
-  auto ppn        = GA_Cluster_nprocs(0);
-#endif
-
-  int hf_guessranks = std::ceil(0.3 * N);
-  int hf_nnodes     = hf_guessranks / ppn;
-  if(hf_guessranks % ppn > 0 || hf_nnodes == 0) hf_nnodes++;
-  if(hf_nnodes > nnodes) hf_nnodes = nnodes;
-  int hf_nranks = hf_nnodes * ppn;
-
-  if(scf_options.nnodes > nnodes) {
-    const std::string errmsg = "ERROR: nnodes (" + std::to_string(scf_options.nnodes) +
-                               ") provided is greater than the number of nodes (" +
-                               std::to_string(nnodes) + ") available!";
-    tamm_terminate(errmsg);
-  }
-
-  if(scf_options.nnodes > hf_nnodes) {
-    hf_nnodes = scf_options.nnodes;
-    hf_nranks = hf_nnodes * ppn;
-  }
-
-#if defined(USE_SCALAPACK)
-  // Find nearest square
-  int sca_nranks = std::ceil(N / 25);
-  if(sca_nranks > hf_nranks) sca_nranks = hf_nranks;
-  sca_nranks = std::pow(std::floor(std::sqrt(sca_nranks)), 2);
-  if(sca_nranks == 0) sca_nranks = 1;
-  int sca_nnodes = sca_nranks / ppn;
-  if(sca_nranks % ppn > 0 || sca_nnodes == 0) sca_nnodes++;
-  if(sca_nnodes > nnodes) sca_nnodes = nnodes;
-    // if(sca_nnodes == 1) ppn = sca_nranks; // single node case
-#else
-  int  sca_nnodes = hf_nnodes;
-  int  sca_nranks = hf_nranks;
-#endif
-
-  return std::make_tuple(nnodes, hf_nnodes, ppn, hf_nranks, sca_nnodes, sca_nranks);
 }
 
 inline void compute_shellpair_list(const ExecutionContext& ec, const libint2::BasisSet& shells,

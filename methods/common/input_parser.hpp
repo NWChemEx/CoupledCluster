@@ -14,11 +14,6 @@ using namespace tamm;
 
 #include "libint2_includes.hpp"
 
-#include "ga/ga.h"
-#if defined(USE_UPCXX)
-#include <upcxx/upcxx.hpp>
-#endif
-
 #include <nlohmann/json.hpp>
 using json = nlohmann::ordered_json;
 

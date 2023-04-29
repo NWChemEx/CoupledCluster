@@ -679,7 +679,7 @@ std::tuple<Tensor<T>, Tensor<T>, Tensor<T>, TAMM_SIZE, tamm::Tile, TiledIndexSpa
 cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& AO,
               Tensor<T> C_AO, Tensor<T> F_AO, Tensor<T> C_beta_AO, Tensor<T> F_beta_AO,
               libint2::BasisSet& shells, std::vector<size_t>& shell_tile_map, bool readv2 = false,
-              std::string cholfile = "", bool is_dlpno = false) {
+              std::string cholfile = "", bool is_dlpno = false, bool is_mso = true) {
   CDOptions cd_options        = sys_data.options_map.cd_options;
   auto      diagtol           = cd_options.diagtol; // tolerance for the max. diagonal
   cd_options.max_cvecs_factor = 2 * std::abs(std::log10(diagtol));
@@ -714,8 +714,9 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, T
 
   if(!readv2) {
     two_index_transform(sys_data, ec, C_AO, F_AO, C_beta_AO, F_beta_AO, d_f1, shells, lcao,
-                        is_dlpno);
-    if(!is_dlpno) cholVpr = cd_svd(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao);
+                        is_dlpno || !is_mso);
+    if(!is_dlpno)
+      cholVpr = cd_svd(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao, is_mso);
     write_to_disk<TensorType>(lcao, lcaofile);
   }
   else {
@@ -727,7 +728,7 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, T
 
     if(rank == 0) cout << "Number of cholesky vectors to be read = " << chol_count << endl;
 
-    if(!is_dlpno) update_sysdata(sys_data, MO);
+    if(!is_dlpno) update_sysdata(sys_data, MO, is_mso);
 
     IndexSpace      chol_is{range(0, chol_count)};
     TiledIndexSpace CI{chol_is, static_cast<tamm::Tile>(itile_size)};

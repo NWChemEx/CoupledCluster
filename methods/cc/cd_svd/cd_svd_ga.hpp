@@ -60,6 +60,45 @@ int64_t ac_fetch_add(int ga_ac, int64_t index, int64_t amount) {
 }
 #endif
 
+std::tuple<TiledIndexSpace, TAMM_SIZE> setup_mo_red(SystemData sys_data, bool triples = false) {
+  // TAMM_SIZE nao = sys_data.nbf;
+  TAMM_SIZE n_occ_alpha = sys_data.n_occ_alpha;
+  TAMM_SIZE n_vir_alpha = sys_data.n_vir_alpha;
+
+  Tile tce_tile = sys_data.options_map.ccsd_options.tilesize;
+  if(!triples) {
+    if((tce_tile < static_cast<Tile>(sys_data.nbf / 10) || tce_tile < 50) &&
+       !sys_data.options_map.ccsd_options.force_tilesize) {
+      tce_tile = static_cast<Tile>(sys_data.nbf / 10);
+      if(tce_tile < 50) tce_tile = 50; // 50 is the default tilesize for CCSD.
+      if(ProcGroup::world_rank() == 0)
+        std::cout << std::endl << "Resetting CCSD tilesize to: " << tce_tile << std::endl;
+    }
+  }
+  else tce_tile = sys_data.options_map.ccsd_options.ccsdt_tilesize;
+
+  const TAMM_SIZE total_orbitals = sys_data.nbf;
+
+  // Construction of tiled index space MO
+  IndexSpace MO_IS{
+    range(0, total_orbitals),
+    {{"occ", {range(0, n_occ_alpha)}}, {"virt", {range(n_occ_alpha, total_orbitals)}}}};
+
+  std::vector<Tile> mo_tiles;
+
+  tamm::Tile est_nt = static_cast<tamm::Tile>(std::ceil(1.0 * n_occ_alpha / tce_tile));
+  for(tamm::Tile x = 0; x < est_nt; x++)
+    mo_tiles.push_back(n_occ_alpha / est_nt + (x < (n_occ_alpha % est_nt)));
+
+  est_nt = static_cast<tamm::Tile>(std::ceil(1.0 * n_vir_alpha / tce_tile));
+  for(tamm::Tile x = 0; x < est_nt; x++)
+    mo_tiles.push_back(n_vir_alpha / est_nt + (x < (n_vir_alpha % est_nt)));
+
+  TiledIndexSpace MO{MO_IS, mo_tiles};
+
+  return std::make_tuple(MO, total_orbitals);
+}
+
 std::tuple<TiledIndexSpace, TAMM_SIZE> setupMOIS(SystemData sys_data, bool triples = false,
                                                  int nactv = 0) {
   TAMM_SIZE n_occ_alpha = sys_data.n_occ_alpha;
@@ -191,17 +230,20 @@ std::tuple<TiledIndexSpace, TAMM_SIZE> setupMOIS(SystemData sys_data, bool tripl
   return std::make_tuple(MO, total_orbitals);
 }
 
-void update_sysdata(SystemData& sys_data, TiledIndexSpace& MO) {
+void update_sysdata(SystemData& sys_data, TiledIndexSpace& MO, bool is_mso = true) {
   const bool do_freeze      = sys_data.n_frozen_core > 0 || sys_data.n_frozen_virtual > 0;
   TAMM_SIZE  total_orbitals = sys_data.nmo;
   if(do_freeze) {
     sys_data.nbf -= (sys_data.n_frozen_core + sys_data.n_frozen_virtual);
     sys_data.n_occ_alpha -= sys_data.n_frozen_core;
     sys_data.n_vir_alpha -= sys_data.n_frozen_virtual;
-    sys_data.n_occ_beta -= sys_data.n_frozen_core;
-    sys_data.n_vir_beta -= sys_data.n_frozen_virtual;
+    if(is_mso) {
+      sys_data.n_occ_beta -= sys_data.n_frozen_core;
+      sys_data.n_vir_beta -= sys_data.n_frozen_virtual;
+    }
     sys_data.update();
-    std::tie(MO, total_orbitals) = setupMOIS(sys_data);
+    if(!is_mso) std::tie(MO, total_orbitals) = setup_mo_red(sys_data);
+    else std::tie(MO, total_orbitals) = setupMOIS(sys_data);
   }
 }
 
@@ -249,7 +291,7 @@ Matrix reshape_mo_matrix(SystemData sys_data, Matrix& emat) {
 template<typename TensorType>
 Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& tMO,
                           TiledIndexSpace& tAO, TAMM_SIZE& chol_count, const TAMM_GA_SIZE max_cvecs,
-                          libint2::BasisSet& shells, Tensor<TensorType>& lcao) {
+                          libint2::BasisSet& shells, Tensor<TensorType>& lcao, bool is_mso = true) {
   using libint2::Atom;
   using libint2::Engine;
   using libint2::Operator;
@@ -287,8 +329,8 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
 
 #ifdef CD_SVD_THROTTLE
   int64_t cd_nranks = std::abs(std::log10(diagtol)) * nbf; // max cores
-  auto nnodes = ec.num_nodes() auto ppn       = ec.ppn();
-  int                               cd_nnodes = cd_nranks / ppn;
+  auto nnodes = ec.nnodes() auto ppn       = ec.ppn();
+  int                            cd_nnodes = cd_nranks / ppn;
   if(cd_nranks % ppn > 0 || cd_nnodes == 0) cd_nnodes++;
   if(cd_nnodes > nnodes) cd_nnodes = nnodes;
   cd_nranks = cd_nnodes * ppn;
@@ -758,7 +800,7 @@ if(iproc == 0) {
             << " secs" << endl;
 }
 
-update_sysdata(sys_data, tMO);
+update_sysdata(sys_data, tMO, is_mso);
 
 TAMM_GA_SIZE N_eff = tMO("all").max_num_indices();
 
