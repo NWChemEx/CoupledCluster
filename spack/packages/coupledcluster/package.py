@@ -21,7 +21,7 @@ class Coupledcluster(CMakePackage,CudaPackage):
     depends_on('mpi')
     depends_on('intel-oneapi-mkl +cluster')
     depends_on('cmake@3.22:')
-    depends_on('cuda@11.1:', when='+cuda')
+    depends_on('cuda@11.5:', when='+cuda')
     depends_on('hdf5 +mpi')
     # Still need to update libint recipe for 2.7.x
     #depends_on('libint@2.7:')
