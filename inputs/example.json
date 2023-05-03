@@ -50,7 +50,7 @@
         "restart": false,
         "noscf": false,
         "scf_type": "restricted",
-        "xc_type": "pbe0",
+        "xc_type": ["pbe0"],
         "debug": false,
         "restart_size": 2000,
         "scalapack_nb": 1,

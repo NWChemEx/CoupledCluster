@@ -223,6 +223,340 @@ void ccsd_t2_os(Scheduler& sch, const TiledIndexSpace& MO, const TiledIndexSpace
   auto chol3d_vo = chol3d_se[2];
   auto chol3d_vv = chol3d_se[3];
 
+  auto hw   = sch.ec().exhw();
+  auto rank = sch.ec().pg().rank();
+
+  // "_a022( aaaa )(p3_va,p4_va,p2_va,p1_va)     =  1.0   * _a021( aa )(p3_va,p2_va,cind) * _a021(
+  // aa )(p4_va,p1_va,cind)")
+  // "_a022( bbbb )(p3_vb,p4_vb,p2_vb,p1_vb)     =  1.0   * _a021( bb )(p3_vb,p2_vb,cind) * _a021(
+  // bb )(p4_vb,p1_vb,cind)"
+  // "_a022( abab )(p3_va,p4_vb,p2_va,p1_vb)     =  1.0   * _a021( aa )(p3_va,p2_va,cind) * _a021(
+  // bb )(p4_vb,p1_vb,cind)")
+
+  int  a22_flag        = 0;
+  auto compute_v4_term = [=, &a22_flag](const IndexVector& cblkid, span<T> cbuf) {
+    Tensor<T>        a22_tmp;
+    LabeledTensor<T>*lhsp_{nullptr}, *rhs1p_{nullptr}, *rhs2p_{nullptr};
+
+    auto [cind]                       = CI.labels<1>("all");
+    auto [p1_va, p2_va, p3_va, p4_va] = v_alpha.labels<4>("all");
+    auto [p1_vb, p2_vb, p3_vb, p4_vb] = v_beta.labels<4>("all");
+
+    if(a22_flag == 1) {
+      a22_tmp = {v_alpha, v_alpha, v_alpha, v_alpha};
+      lhsp_   = new LabeledTensor<T>{a22_tmp, {p3_va, p4_va, p2_va, p1_va}};
+      rhs1p_  = new LabeledTensor<T>{_a021("aa"), {p3_va, p2_va, cind}};
+      rhs2p_  = new LabeledTensor<T>{_a021("aa"), {p4_va, p1_va, cind}};
+    }
+    else if(a22_flag == 2) {
+      a22_tmp = {v_beta, v_beta, v_beta, v_beta};
+      lhsp_   = new LabeledTensor<T>{a22_tmp, {p3_vb, p4_vb, p2_vb, p1_vb}};
+      rhs1p_  = new LabeledTensor<T>{_a021("bb"), {p3_vb, p2_vb, cind}};
+      rhs2p_  = new LabeledTensor<T>{_a021("bb"), {p4_vb, p1_vb, cind}};
+    }
+    else if(a22_flag == 3) {
+      a22_tmp = {v_alpha, v_beta, v_alpha, v_beta};
+      lhsp_   = new LabeledTensor<T>{a22_tmp, {p3_va, p4_vb, p2_va, p1_vb}};
+      rhs1p_  = new LabeledTensor<T>{_a021("aa"), {p3_va, p2_va, cind}};
+      rhs2p_  = new LabeledTensor<T>{_a021("bb"), {p4_vb, p1_vb, cind}};
+    }
+    else { tamm_terminate("[CCSD-OS] This line should be unreachable"); }
+
+    LabeledTensor<T>& lhs_  = *lhsp_;
+    LabeledTensor<T>& rhs1_ = *rhs1p_;
+    LabeledTensor<T>& rhs2_ = *rhs2p_;
+
+    // mult op constructor
+    auto lhs_lbls  = lhs_.labels();
+    auto rhs1_lbls = rhs1_.labels();
+    auto rhs2_lbls = rhs2_.labels();
+
+    IntLabelVec lhs_int_labels_;
+    IntLabelVec rhs1_int_labels_;
+    IntLabelVec rhs2_int_labels_;
+
+    auto labels{lhs_lbls};
+    labels.insert(labels.end(), rhs1_lbls.begin(), rhs1_lbls.end());
+    labels.insert(labels.end(), rhs2_lbls.begin(), rhs2_lbls.end());
+
+    internal::update_labels(labels);
+
+    lhs_lbls  = IndexLabelVec(labels.begin(), labels.begin() + lhs_.labels().size());
+    rhs1_lbls = IndexLabelVec(labels.begin() + lhs_.labels().size(),
+                              labels.begin() + lhs_.labels().size() + rhs1_.labels().size());
+    rhs2_lbls = IndexLabelVec(labels.begin() + lhs_.labels().size() + rhs1_.labels().size(),
+                              labels.begin() + lhs_.labels().size() + rhs1_.labels().size() +
+                                rhs2_.labels().size());
+    lhs_.set_labels(lhs_lbls);
+    rhs1_.set_labels(rhs1_lbls);
+    rhs2_.set_labels(rhs2_lbls);
+
+    // fillin_int_labels
+    std::map<TileLabelElement, int> primary_labels_map;
+    int                             cnt = -1;
+    for(const auto& lbl: lhs_.labels()) { primary_labels_map[lbl.primary_label()] = --cnt; }
+    for(const auto& lbl: rhs1_.labels()) { primary_labels_map[lbl.primary_label()] = --cnt; }
+    for(const auto& lbl: rhs2_.labels()) { primary_labels_map[lbl.primary_label()] = --cnt; }
+    for(const auto& lbl: lhs_.labels()) {
+      lhs_int_labels_.push_back(primary_labels_map[lbl.primary_label()]);
+    }
+    for(const auto& lbl: rhs1_.labels()) {
+      rhs1_int_labels_.push_back(primary_labels_map[lbl.primary_label()]);
+    }
+    for(const auto& lbl: rhs2_.labels()) {
+      rhs2_int_labels_.push_back(primary_labels_map[lbl.primary_label()]);
+    }
+    // todo: validate
+
+    using TensorElType1 = T;
+    using TensorElType2 = T;
+    using TensorElType3 = T;
+
+    // determine set of all labels for do_work
+    IndexLabelVec all_labels{lhs_.labels()};
+    all_labels.insert(all_labels.end(), rhs1_.labels().begin(), rhs1_.labels().end());
+    all_labels.insert(all_labels.end(), rhs2_.labels().begin(), rhs2_.labels().end());
+    // LabelLoopNest loop_nest{all_labels};
+
+    // execute-bufacc
+    IndexLabelVec lhs_labels{lhs_.labels()};
+    IndexLabelVec rhs1_labels{rhs1_.labels()};
+    IndexLabelVec rhs2_labels{rhs2_.labels()};
+    IndexLabelVec all_rhs_labels{rhs1_.labels()};
+    all_rhs_labels.insert(all_rhs_labels.end(), rhs2_.labels().begin(), rhs2_.labels().end());
+
+    // compute the reduction labels
+    std::sort(lhs_labels.begin(), lhs_labels.end());
+    auto unique_labels = internal::unique_entries_by_primary_label(all_rhs_labels);
+    std::sort(unique_labels.begin(), unique_labels.end());
+    IndexLabelVec reduction_labels; //{reduction.begin(), reduction.end()};
+    std::set_difference(unique_labels.begin(), unique_labels.end(), lhs_labels.begin(),
+                        lhs_labels.end(), std::back_inserter(reduction_labels));
+
+    std::vector<int> rhs1_map_output;
+    std::vector<int> rhs2_map_output;
+    std::vector<int> rhs1_map_reduction;
+    std::vector<int> rhs2_map_reduction;
+    // const auto&      lhs_lbls = lhs_.labels();
+    for(auto& lbl: rhs1_labels) {
+      auto it_out = std::find(lhs_lbls.begin(), lhs_lbls.end(), lbl);
+      if(it_out != lhs_lbls.end()) rhs1_map_output.push_back(it_out - lhs_lbls.begin());
+      else rhs1_map_output.push_back(-1);
+
+      // auto it_red = std::find(reduction.begin(), reduction.end(), lbl);
+      auto it_red = std::find(reduction_labels.begin(), reduction_labels.end(), lbl);
+      if(it_red != reduction_labels.end())
+        rhs1_map_reduction.push_back(it_red - reduction_labels.begin());
+      else rhs1_map_reduction.push_back(-1);
+    }
+
+    for(auto& lbl: rhs2_labels) {
+      auto it_out = std::find(lhs_lbls.begin(), lhs_lbls.end(), lbl);
+      if(it_out != lhs_lbls.end()) rhs2_map_output.push_back(it_out - lhs_lbls.begin());
+      else rhs2_map_output.push_back(-1);
+
+      auto it_red = std::find(reduction_labels.begin(), reduction_labels.end(), lbl);
+      if(it_red != reduction_labels.end())
+        rhs2_map_reduction.push_back(it_red - reduction_labels.begin());
+      else rhs2_map_reduction.push_back(-1);
+    }
+
+    auto ctensor = lhs_.tensor();
+    auto atensor = rhs1_.tensor();
+    auto btensor = rhs2_.tensor();
+
+    std::vector<AddBuf<TensorElType1, TensorElType2, TensorElType3>*> add_bufs;
+
+    // compute blockids from the loop indices. itval is the loop index
+    // execute_bufacc(ec, hw);
+    LabelLoopNest lhs_loop_nest{lhs_.labels()};
+    IndexVector   translated_ablockid, translated_bblockid, translated_cblockid;
+    auto          it    = lhs_loop_nest.begin();
+    auto          itval = *it;
+    for(; it != lhs_loop_nest.end(); ++it) {
+      itval = *it;
+      // auto        it   = ivec.begin();
+      IndexVector c_block_id{itval};
+      translated_cblockid = internal::translate_blockid(c_block_id, lhs_);
+      if(translated_cblockid == cblkid) break;
+    }
+
+    // execute
+    // const auto& ldist = lhs_.tensor().distribution();
+    // for(const auto& lblockid: lhs_loop_nest) {
+    //   const auto translated_lblockid = internal::translate_blockid(lblockid, lhs_);
+    //   if(lhs_.tensor().is_non_zero(translated_lblockid) &&
+    //       std::get<0>(ldist.locate(translated_lblockid)) == rank) {
+    //     lambda(lblockid);
+    //   }
+
+    const size_t csize = ctensor.block_size(translated_cblockid);
+    // std::vector<TensorElType1> cbuf(csize, 0);
+    memset(cbuf.data(), 0x00, csize * sizeof(TensorElType1));
+    const auto& cdims = ctensor.block_dims(translated_cblockid);
+
+    SizeVec cdims_sz;
+    for(const auto v: cdims) { cdims_sz.push_back(v); }
+
+    bool isgpu = false;
+
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+    TensorElType2* th_a{nullptr};
+    TensorElType3* th_b{nullptr};
+    TensorElType1* th_c{nullptr};
+    auto&          thandle = tamm::GPUStreamPool::getInstance().getStream();
+
+    AddBuf<TensorElType1, TensorElType2, TensorElType3>* ab{nullptr};
+    if(hw == ExecutionHW::GPU) {
+      ab = new AddBuf<TensorElType1, TensorElType2, TensorElType3>{
+        isgpu, &thandle, th_a, th_b, th_c, {}, translated_cblockid};
+    }
+    else {
+      ab = new AddBuf<TensorElType1, TensorElType2, TensorElType3>{
+        isgpu, &thandle, th_a, th_b, th_c, {}, translated_cblockid};
+    }
+    add_bufs.push_back(ab);
+#else
+    gpuStream_t                                          thandle{};
+    AddBuf<TensorElType1, TensorElType2, TensorElType3>* ab =
+      new AddBuf<TensorElType1, TensorElType2, TensorElType3>{
+        isgpu, ctensor, {}, translated_cblockid};
+    add_bufs.push_back(ab);
+#endif
+
+    // LabelLoopNest inner_loop{reduction_lbls};
+    LabelLoopNest inner_loop{reduction_labels};
+
+    int loop_counter = 0;
+
+    TensorElType1* cbuf_dev_ptr{nullptr};
+    TensorElType1* cbuf_tmp_dev_ptr{nullptr};
+#if(defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP))
+    auto& memPool = tamm::GPUPooledStorageManager::getInstance();
+
+    if(hw == ExecutionHW::GPU) {
+      cbuf_dev_ptr = static_cast<TensorElType1*>(memPool.allocate(csize * sizeof(TensorElType1)));
+      cbuf_tmp_dev_ptr =
+        static_cast<TensorElType1*>(memPool.allocate(csize * sizeof(TensorElType1)));
+
+      memPool.gpuMemset(reinterpret_cast<void*&>(cbuf_dev_ptr), csize * sizeof(TensorElType1));
+      memPool.gpuMemset(reinterpret_cast<void*&>(cbuf_tmp_dev_ptr), csize * sizeof(TensorElType1));
+    }
+#endif
+
+    int slc = 0;
+    for(const auto& inner_it_val: inner_loop) { // k
+
+      IndexVector a_block_id(rhs1_.labels().size());
+
+      for(size_t i = 0; i < rhs1_map_output.size(); i++) {
+        if(rhs1_map_output[i] != -1) { a_block_id[i] = itval[rhs1_map_output[i]]; }
+      }
+
+      for(size_t i = 0; i < rhs1_map_reduction.size(); i++) {
+        if(rhs1_map_reduction[i] != -1) { a_block_id[i] = inner_it_val[rhs1_map_reduction[i]]; }
+      }
+
+      const auto translated_ablockid = internal::translate_blockid(a_block_id, rhs1_);
+      if(!atensor.is_non_zero(translated_ablockid)) continue;
+
+      IndexVector b_block_id(rhs2_.labels().size());
+
+      for(size_t i = 0; i < rhs2_map_output.size(); i++) {
+        if(rhs2_map_output[i] != -1) { b_block_id[i] = itval[rhs2_map_output[i]]; }
+      }
+
+      for(size_t i = 0; i < rhs2_map_reduction.size(); i++) {
+        if(rhs2_map_reduction[i] != -1) { b_block_id[i] = inner_it_val[rhs2_map_reduction[i]]; }
+      }
+
+      const auto translated_bblockid = internal::translate_blockid(b_block_id, rhs2_);
+      if(!btensor.is_non_zero(translated_bblockid)) continue;
+
+      // compute block size and allocate buffers for abuf and bbuf
+      const size_t asize = atensor.block_size(translated_ablockid);
+      const size_t bsize = btensor.block_size(translated_bblockid);
+
+      std::vector<TensorElType2> abuf(asize);
+      std::vector<TensorElType3> bbuf(bsize);
+
+      atensor.get(translated_ablockid, abuf);
+      btensor.get(translated_bblockid, bbuf);
+
+      const auto& adims = atensor.block_dims(translated_ablockid);
+      const auto& bdims = btensor.block_dims(translated_bblockid);
+
+      // changed cscale from 0 to 1 to aggregate on cbuf
+      T cscale{1};
+
+      SizeVec adims_sz, bdims_sz;
+      for(const auto v: adims) { adims_sz.push_back(v); }
+      for(const auto v: bdims) { bdims_sz.push_back(v); }
+
+      // A*B
+
+      {
+        AddBuf<TensorElType1, TensorElType2, TensorElType3>* abptr{nullptr};
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+        if(hw == ExecutionHW::GPU) {
+          abptr   = ab;
+          ab->ta_ = static_cast<TensorElType2*>(memPool.allocate(asize * sizeof(TensorElType2)));
+          ab->tb_ = static_cast<TensorElType3*>(memPool.allocate(bsize * sizeof(TensorElType3)));
+        }
+        else abptr = add_bufs[0];
+#else
+        abptr = add_bufs[0];
+#endif
+        abptr->abuf_ = std::move(abuf);
+        abptr->bbuf_ = std::move(bbuf);
+
+        kernels::block_multiply<T, TensorElType1, TensorElType2, TensorElType3>(
+          abptr->isgpu_,
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+          abptr->ta_, abptr->tb_,
+#endif
+          thandle, 1.0, (abptr->abuf_).data(), adims_sz, rhs1_int_labels_, (abptr->bbuf_).data(),
+          bdims_sz, rhs2_int_labels_, cscale, cbuf.data(), cdims_sz, lhs_int_labels_, hw,
+          has_gpu_tmp, false, cbuf_dev_ptr, cbuf_tmp_dev_ptr);
+      }
+#if(defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP))
+      if(hw == ExecutionHW::GPU) {
+        memPool.deallocate(static_cast<void*>(ab->ta_), (ab->abuf_).size() * sizeof(TensorElType2));
+        memPool.deallocate(static_cast<void*>(ab->tb_), (ab->bbuf_).size() * sizeof(TensorElType3));
+      }
+#endif
+      slc++;
+    } // end of reduction loop
+
+    // add the computed update to the tensor
+    {
+#if(defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP))
+      // copy to host
+      if(hw == ExecutionHW::GPU) {
+        std::vector<TensorElType1> cbuf_tmp(csize, 0);
+        kernels::copy_result_to_host(hw, thandle, cbuf_tmp, cbuf_dev_ptr);
+        // cbuf+=cbuf_tmp
+        kernels::stream_synchronize<TensorElType1>(thandle);
+        blas::axpy(csize, TensorElType1{1}, cbuf_tmp.data(), 1, cbuf.data(), 1);
+
+        // free cbuf_dev_ptr
+        auto& memPool = tamm::GPUPooledStorageManager::getInstance();
+        memPool.deallocate(static_cast<void*>(cbuf_dev_ptr), csize * sizeof(TensorElType1));
+        memPool.deallocate(static_cast<void*>(cbuf_tmp_dev_ptr), csize * sizeof(TensorElType1));
+      }
+#endif
+      // ctensor.add(translated_cblockid, cbuf);
+      // for (size_t i=0;i<csize;i++) dbuf[i] = cbuf[i];
+    }
+
+    for(auto& ab: add_bufs) delete ab;
+    add_bufs.clear();
+  };
+
+  a22_aaaa = Tensor<T>{{v_alpha, v_alpha, v_alpha, v_alpha}, compute_v4_term};
+  a22_abab = Tensor<T>{{v_alpha, v_beta, v_alpha, v_beta}, compute_v4_term};
+  a22_bbbb = Tensor<T>{{v_beta, v_beta, v_beta, v_beta}, compute_v4_term};
+
   // clang-format off
   sch 
     (_a017("aa")(p3_va, h2_oa, cind)            = -1.0   * t2_aaaa(p1_va, p3_va, h3_oa, h2_oa) * chol3d_ov("aa")(h3_oa, p1_va, cind), 
@@ -311,21 +645,39 @@ void ccsd_t2_os(Scheduler& sch, const TiledIndexSpace& MO, const TiledIndexSpace
     (i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)        =  0.5   * _a017("bb")(p3_vb, h1_ob, cind) * _a017("bb")(p4_vb, h2_ob, cind), 
     "i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)        =  0.5   * _a017( bb )(p3_vb, h1_ob, cind) * _a017( bb )(p4_vb, h2_ob, cind)")
     (i0_abab(p3_va, p4_vb, h1_oa, h2_ob)        =  1.0   * _a017("aa")(p3_va, h1_oa, cind) * _a017("bb")(p4_vb, h2_ob, cind), 
-    "i0_abab(p3_va, p4_vb, h1_oa, h2_ob)        =  1.0   * _a017( aa )(p3_va, h1_oa, cind) * _a017( bb )(p4_vb, h2_ob, cind)")
+    "i0_abab(p3_va, p4_vb, h1_oa, h2_ob)        =  1.0   * _a017( aa )(p3_va, h1_oa, cind) * _a017( bb )(p4_vb, h2_ob, cind)").execute(hw);
 
-    (_a022("aaaa")(p3_va,p4_va,p2_va,p1_va)     =  1.0   * _a021("aa")(p3_va,p2_va,cind) * _a021("aa")(p4_va,p1_va,cind), 
-    "_a022( aaaa )(p3_va,p4_va,p2_va,p1_va)     =  1.0   * _a021( aa )(p3_va,p2_va,cind) * _a021( aa )(p4_va,p1_va,cind)")
-    (_a022("abab")(p3_va,p4_vb,p2_va,p1_vb)     =  1.0   * _a021("aa")(p3_va,p2_va,cind) * _a021("bb")(p4_vb,p1_vb,cind), 
-    "_a022( abab )(p3_va,p4_vb,p2_va,p1_vb)     =  1.0   * _a021( aa )(p3_va,p2_va,cind) * _a021( bb )(p4_vb,p1_vb,cind)")
-    (_a022("bbbb")(p3_vb,p4_vb,p2_vb,p1_vb)     =  1.0   * _a021("bb")(p3_vb,p2_vb,cind) * _a021("bb")(p4_vb,p1_vb,cind), 
-    "_a022( bbbb )(p3_vb,p4_vb,p2_vb,p1_vb)     =  1.0   * _a021( bb )(p3_vb,p2_vb,cind) * _a021( bb )(p4_vb,p1_vb,cind)")
-    (i0_aaaa(p3_va, p4_va, h1_oa, h2_oa)       +=  1.0   * _a022("aaaa")(p3_va, p4_va, p2_va, p1_va) * t2_aaaa(p2_va,p1_va,h1_oa,h2_oa), 
-    "i0_aaaa(p3_va, p4_va, h1_oa, h2_oa)       +=  1.0   * _a022( aaaa )(p3_va, p4_va, p2_va, p1_va) * t2_aaaa(p2_va,p1_va,h1_oa,h2_oa)")
-    (i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)       +=  1.0   * _a022("bbbb")(p3_vb, p4_vb, p2_vb, p1_vb) * t2_bbbb(p2_vb,p1_vb,h1_ob,h2_ob), 
-    "i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)       +=  1.0   * _a022( bbbb )(p3_vb, p4_vb, p2_vb, p1_vb) * t2_bbbb(p2_vb,p1_vb,h1_ob,h2_ob)")
-    (i0_abab(p3_va, p4_vb, h1_oa, h2_ob)       +=  4.0   * _a022("abab")(p3_va, p4_vb, p2_va, p1_vb) * t2_abab(p2_va,p1_vb,h1_oa,h2_ob), 
-    "i0_abab(p3_va, p4_vb, h1_oa, h2_ob)       +=  4.0   * _a022( abab )(p3_va, p4_vb, p2_va, p1_vb) * t2_abab(p2_va,p1_vb,h1_oa,h2_ob)")
-    (_a019("aaaa")(h4_oa, h3_oa, h1_oa, h2_oa) += -0.125 * _a004("aaaa")(p1_va, p2_va, h3_oa, h4_oa) * t2_aaaa(p1_va,p2_va,h1_oa,h2_oa), 
+
+
+    // sch(_a022("aaaa")(p3_va,p4_va,p2_va,p1_va)     =  1.0   * _a021("aa")(p3_va,p2_va,cind) * _a021("aa")(p4_va,p1_va,cind), 
+    // "_a022( aaaa )(p3_va,p4_va,p2_va,p1_va)     =  1.0   * _a021( aa )(p3_va,p2_va,cind) * _a021( aa )(p4_va,p1_va,cind)")
+    // (_a022("abab")(p3_va,p4_vb,p2_va,p1_vb)     =  1.0   * _a021("aa")(p3_va,p2_va,cind) * _a021("bb")(p4_vb,p1_vb,cind), 
+    // "_a022( abab )(p3_va,p4_vb,p2_va,p1_vb)     =  1.0   * _a021( aa )(p3_va,p2_va,cind) * _a021( bb )(p4_vb,p1_vb,cind)")
+    // (_a022("bbbb")(p3_vb,p4_vb,p2_vb,p1_vb)     =  1.0   * _a021("bb")(p3_vb,p2_vb,cind) * _a021("bb")(p4_vb,p1_vb,cind), 
+    // "_a022( bbbb )(p3_vb,p4_vb,p2_vb,p1_vb)     =  1.0   * _a021( bb )(p3_vb,p2_vb,cind) * _a021( bb )(p4_vb,p1_vb,cind)")
+    // (i0_aaaa(p3_va, p4_va, h1_oa, h2_oa)       +=  1.0   * _a022("aaaa")(p3_va, p4_va, p2_va, p1_va) * t2_aaaa(p2_va,p1_va,h1_oa,h2_oa), 
+    // "i0_aaaa(p3_va, p4_va, h1_oa, h2_oa)       +=  1.0   * _a022( aaaa )(p3_va, p4_va, p2_va, p1_va) * t2_aaaa(p2_va,p1_va,h1_oa,h2_oa)")
+    // (i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)       +=  1.0   * _a022("bbbb")(p3_vb, p4_vb, p2_vb, p1_vb) * t2_bbbb(p2_vb,p1_vb,h1_ob,h2_ob), 
+    // "i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)       +=  1.0   * _a022( bbbb )(p3_vb, p4_vb, p2_vb, p1_vb) * t2_bbbb(p2_vb,p1_vb,h1_ob,h2_ob)")
+    // (i0_abab(p3_va, p4_vb, h1_oa, h2_ob)       +=  4.0   * _a022("abab")(p3_va, p4_vb, p2_va, p1_vb) * t2_abab(p2_va,p1_vb,h1_oa,h2_ob), 
+    // "i0_abab(p3_va, p4_vb, h1_oa, h2_ob)       +=  4.0   * _a022( abab )(p3_va, p4_vb, p2_va, p1_vb) * t2_abab(p2_va,p1_vb,h1_oa,h2_ob)");
+  
+    a22_flag = 1;
+
+    sch(i0_aaaa(p3_va, p4_va, h1_oa, h2_oa)       +=  1.0   * a22_aaaa(p3_va, p4_va, p2_va, p1_va) * t2_aaaa(p2_va,p1_va,h1_oa,h2_oa), 
+       "i0_aaaa(p3_va, p4_va, h1_oa, h2_oa)       +=  1.0   * a22_aaaa(p3_va, p4_va, p2_va, p1_va) * t2_aaaa(p2_va,p1_va,h1_oa,h2_oa)").execute(hw);
+
+    a22_flag = 2;
+
+    sch(i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)       +=  1.0   * a22_bbbb(p3_vb, p4_vb, p2_vb, p1_vb) * t2_bbbb(p2_vb,p1_vb,h1_ob,h2_ob), 
+       "i0_bbbb(p3_vb, p4_vb, h1_ob, h2_ob)       +=  1.0   * a22_bbbb(p3_vb, p4_vb, p2_vb, p1_vb) * t2_bbbb(p2_vb,p1_vb,h1_ob,h2_ob)").execute(hw);
+
+    a22_flag = 3;
+
+    sch(i0_abab(p3_va, p4_vb, h1_oa, h2_ob)       +=  4.0   * a22_abab(p3_va, p4_vb, p2_va, p1_vb) * t2_abab(p2_va,p1_vb,h1_oa,h2_ob), 
+       "i0_abab(p3_va, p4_vb, h1_oa, h2_ob)       +=  4.0   * a22_abab(p3_va, p4_vb, p2_va, p1_vb) * t2_abab(p2_va,p1_vb,h1_oa,h2_ob)").execute(hw);
+
+    sch(_a019("aaaa")(h4_oa, h3_oa, h1_oa, h2_oa) += -0.125 * _a004("aaaa")(p1_va, p2_va, h3_oa, h4_oa) * t2_aaaa(p1_va,p2_va,h1_oa,h2_oa), 
     "_a019( aaaa )(h4_oa, h3_oa, h1_oa, h2_oa) += -0.125 * _a004( aaaa )(p1_va, p2_va, h3_oa, h4_oa) * t2_aaaa(p1_va,p2_va,h1_oa,h2_oa)")
     (_a019("abab")(h4_oa, h3_ob, h1_oa, h2_ob) +=  0.25  * _a004("abab")(p1_va, p2_vb, h4_oa, h3_ob) * t2_abab(p1_va,p2_vb,h1_oa,h2_ob), 
     "_a019( abab )(h4_oa, h3_ob, h1_oa, h2_ob) +=  0.25  * _a004( abab )(p1_va, p2_vb, h4_oa, h3_ob) * t2_abab(p1_va,p2_vb,h1_oa,h2_ob)") 
@@ -520,7 +872,7 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
   _a021  = CCSE_Tensors<T>{MO, {V, V, CI}, "_a021", {"aa", "bb"}};
 
   _a019 = CCSE_Tensors<T>{MO, {O, O, O, O}, "_a019", {"aaaa", "abab", "bbbb"}};
-  _a022 = CCSE_Tensors<T>{MO, {V, V, V, V}, "_a022", {"aaaa", "abab", "bbbb"}};
+  // _a022 = CCSE_Tensors<T>{MO, {V, V, V, V}, "_a022", {"aaaa", "abab", "bbbb"}};
   _a020 =
     CCSE_Tensors<T>{MO, {V, O, V, O}, "_a020", {"aaaa", "abab", "baab", "abba", "baba", "bbbb"}};
 
@@ -537,9 +889,9 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     total_ccsd_mem += sum_tensor_sizes(d_r1s[ri], d_r2s[ri], d_t1s[ri], d_t2s[ri]);
 
   // Intermediates
-  const double v4int_size = CCSE_Tensors<T>::sum_tensor_sizes_list(_a022);
-  double       total_ccsd_mem_tmp =
-    sum_tensor_sizes(_a02V, _a007V) + v4int_size +
+  // const double v4int_size = CCSE_Tensors<T>::sum_tensor_sizes_list(_a022);
+  double total_ccsd_mem_tmp =
+    sum_tensor_sizes(_a02V, _a007V) /*+ v4int_size */ +
     CCSE_Tensors<T>::sum_tensor_sizes_list(i0_t2_tmp, _a01, _a04, _a05, _a06, _a001, _a004, _a006,
                                            _a008, _a009, _a017, _a019, _a020, _a021);
 
@@ -549,8 +901,8 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     std::cout << std::endl
               << "Total CPU memory required for Open Shell Cholesky CCSD calculation: "
               << std::fixed << std::setprecision(2) << total_ccsd_mem << " GiB" << std::endl;
-    std::cout << " (V^4 intermediate size: " << std::fixed << std::setprecision(2) << v4int_size
-              << " GiB)" << std::endl;
+    // std::cout << " (V^4 intermediate size: " << std::fixed << std::setprecision(2) << v4int_size
+    //           << " GiB)" << std::endl;
   }
   check_memory_requirements(ec, total_ccsd_mem);
 
@@ -637,7 +989,7 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
     // allocate all intermediates
     sch.allocate(_a02V, _a007V);
     CCSE_Tensors<T>::allocate_list(sch, _a004, i0_t2_tmp, _a01, _a04, _a05, _a06, _a001, _a006,
-                                   _a008, _a009, _a017, _a019, _a020, _a021, _a022);
+                                   _a008, _a009, _a017, _a019, _a020, _a021); // _a022
     sch.execute();
     // clang-format off
     sch
@@ -760,7 +1112,7 @@ cd_ccsd_os_driver(SystemData& sys_data, ExecutionContext& ec, const TiledIndexSp
 
     sch.deallocate(_a02V, _a007V, d_r1_residual, d_r2_residual);
     CCSE_Tensors<T>::deallocate_list(sch, _a004, i0_t2_tmp, _a01, _a04, _a05, _a06, _a001, _a006,
-                                     _a008, _a009, _a017, _a019, _a020, _a021, _a022);
+                                     _a008, _a009, _a017, _a019, _a020, _a021); //_a022
 
   } // no restart
   else {
