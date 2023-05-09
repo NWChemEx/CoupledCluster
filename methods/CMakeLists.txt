@@ -4,4 +4,7 @@ find_package(CoupledCluster REQUIRED)
 include(TargetMacros)
 
 include(${CMAKE_CURRENT_LIST_DIR}/scf/scf.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/cc/cc.cmake)
+if ("CC" IN_LIST MODULES)
+  include(${CMAKE_CURRENT_LIST_DIR}/cc/cc.cmake)
+endif()
+

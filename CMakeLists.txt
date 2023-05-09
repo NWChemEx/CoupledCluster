@@ -33,7 +33,7 @@ set(CMSB_PROJECTS CoupledCluster)
 set(CoupledCluster_DEPENDENCIES TAMM)
 
 set(BUILD_TESTS OFF)
-set(BUILD_LIBINT ON)
+set(MODULES "CC")
 
 set(CoupledCluster_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/CoupledCluster)
 set(CoupledCluster_METHODS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/methods/)

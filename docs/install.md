@@ -16,7 +16,7 @@ cd TAMM && mkdir build && cd build
 ```
 - ### A detailed list of the cmake build options available are listed [here](https://tamm.readthedocs.io/en/latest/install.html)
 ```
-CC=gcc CXX=g++ FC=gfortran cmake -DCMAKE_INSTALL_PREFIX=<exachem-install-path> -DBUILD_LIBINT=ON -DUSE_GAUXC=ON ..
+CC=gcc CXX=g++ FC=gfortran cmake -DCMAKE_INSTALL_PREFIX=<exachem-install-path> -DMODULES="CC" ..
 make -j4 install
 ```
 
@@ -24,7 +24,7 @@ make -j4 install
 ```
 git clone https://github.com/ExaChem/exachem.git
 cd exachem && mkdir build && cd build
-CC=gcc CXX=g++ FC=gfortran cmake -DCMAKE_INSTALL_PREFIX=<exachem-install-path> -DBUILD_LIBINT=ON -DUSE_GAUXC=ON ..
+CC=gcc CXX=g++ FC=gfortran cmake -DCMAKE_INSTALL_PREFIX=<exachem-install-path> -DMODULES="CC" ..
 make -j4
 ```
 

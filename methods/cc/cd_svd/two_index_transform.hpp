@@ -91,9 +91,7 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
 
   auto rank = ec.pg().rank();
 
-  //
   // 2-index transform
-  //
   auto hf_t1 = std::chrono::high_resolution_clock::now();
 
   auto         MO      = F_MO.tiled_index_spaces()[0];
@@ -107,6 +105,8 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
   Matrix CTiled(nao, N);
 
   std::string err_msg{};
+
+  const int pcore = sys_data.options_map.ccsd_options.pcore - 1; // 0-based indexing
 
   if(rank == 0) {
     cout << std::endl << "-----------------------------------------------------" << endl;
@@ -174,7 +174,6 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
       F.block(nmo_occ+n_vir_alpha, nmo_occ+n_vir_alpha, n_vir_beta, n_vir_beta) = F_MO_beta.block(n_occ_beta, n_occ_beta, n_vir_beta, n_vir_beta);
       // clang-format on
 
-      const int pcore = sys_data.options_map.ccsd_options.pcore - 1; // 0-based indexing
       if(pcore >= 0) {
         const auto out_fp =
           sys_data.output_file_prefix + "." + sys_data.options_map.ccsd_options.basis;
@@ -250,4 +249,6 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
               << hf_time << " secs" << endl;
     cout << std::endl << "-----------------------------------------------------" << endl;
   }
+  if(pcore >= 0 && is_rhf)
+    tamm_terminate("[RHF] pcore>=0 selected, fock and movecs written to disk");
 }
