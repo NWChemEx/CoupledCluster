@@ -30,7 +30,7 @@ class Coupledcluster(CMakePackage,CudaPackage):
         args = [
             # This was not able to detect presence of libint in first test
             #'-DLibInt2_ROOT=%s' % self.spec['libint'].prefix,
-            '-DBUILD_LIBINT=ON',
+            '-DMODULES=CC',
             '-DHDF5_ROOT=%s' % self.spec['hdf5'].prefix,
             '-DLINALG_VENDOR=IntelMKL',
             '-DLINALG_PREFIX=%s' % join_path(self.spec['intel-oneapi-mkl'].prefix, 'mkl', 'latest'),

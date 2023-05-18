@@ -105,7 +105,7 @@ if(USE_CUDA)
         message(FATAL_ERROR "CUDA Toolkit not found.")
     endif()
 
-    set(_CUDA_MIN "11.5")
+    set(_CUDA_MIN "11.4")
     if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS ${_CUDA_MIN})
         message(FATAL_ERROR "CUDA version provided \
         (${CMAKE_CUDA_COMPILER_VERSION}) \
