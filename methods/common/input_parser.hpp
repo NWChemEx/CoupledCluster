@@ -286,7 +286,6 @@ class CCSDOptions: public Options {
 public:
   CCSDOptions() = default;
   CCSDOptions(Options o): Options(o) {
-    printtol       = 0.05;
     threshold      = 1e-6;
     force_tilesize = false;
     tilesize       = 40;
@@ -380,10 +379,11 @@ public:
   int  writet_iter;
   bool readt, writet, writev, gf_restart, gf_ip, gf_ea, gf_os, gf_cs, gf_itriples, gf_profile,
     balance_tiles, computeTData;
-  bool   profile_ccsd;
-  double lshift;
-  double printtol;
-  double threshold;
+  bool                    profile_ccsd;
+  double                  lshift;
+  double                  threshold;
+  bool                    ccsd_diagnostics{false};
+  std::pair<bool, double> tamplitudes{false, 0.05};
 
   int nactive;
   int ccsd_maxiter;
@@ -465,7 +465,6 @@ public:
     cout << " ccsdt_tilesize       = " << ccsdt_tilesize << endl;
 
     cout << " ndiis                = " << ndiis << endl;
-    cout << " printtol             = " << printtol << endl;
     cout << " threshold            = " << threshold << endl;
     cout << " tilesize             = " << tilesize << endl;
     if(nactive > 0) cout << " nactive              = " << nactive << endl;
@@ -549,18 +548,39 @@ public:
   }
 };
 
-class CASOptions: public Options {
+class FCIOptions: public Options {
 public:
-  CASOptions() = default;
-  CASOptions(Options o): Options(o) {
-    norb    = 0;
-    nel     = 0;
-    FCIDUMP = false;
+  FCIOptions() = default;
+  FCIOptions(Options o): Options(o) {
+    job       = "CI";
+    expansion = "CAS";
+
+    // MCSCF
+    max_macro_iter     = 100;
+    max_orbital_step   = 0.5;
+    orb_grad_tol_mcscf = 5e-6;
+    enable_diis        = true;
+    diis_start_iter    = 3;
+    diis_nkeep         = 10;
+    ci_res_tol         = 1e-8;
+    ci_max_subspace    = 20;
+    ci_matel_tol       = std::numeric_limits<double>::epsilon();
+
+    // PRINT
+    print_mcscf = true;
   }
 
-  int  norb;
-  int  nel;
-  bool FCIDUMP;
+  int         nalpha{}, nbeta{}, nactive{}, ninactive{};
+  std::string job, expansion;
+
+  // MCSCF
+  bool   enable_diis;
+  int    max_macro_iter, diis_start_iter, diis_nkeep, ci_max_subspace;
+  double max_orbital_step, orb_grad_tol_mcscf, ci_res_tol, ci_matel_tol;
+
+  // PRINT
+  bool print_davidson{}, print_ci{}, print_mcscf{}, print_diis{}, print_asci_search{};
+  std::pair<bool, double> print_state_char{false, 1e-2};
 };
 
 class OptionsMap {
@@ -571,7 +591,7 @@ public:
   CDOptions   cd_options;
   GWOptions   gw_options;
   CCSDOptions ccsd_options;
-  CASOptions  cas_options;
+  FCIOptions  fci_options;
 };
 
 inline void to_upper(std::string& str) {
@@ -595,14 +615,14 @@ void parse_option(T& val, json j, string key, bool optional = true) {
   }
 }
 
-inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions, CASOptions>
+inline std::tuple<Options, SCFOptions, CDOptions, GWOptions, CCSDOptions, FCIOptions>
 parse_json(json& jinput) {
   Options options;
 
   parse_option<string>(options.geom_units, jinput["geometry"], "units");
 
   const std::vector<string> valid_sections{"geometry", "basis", "common", "SCF",     "CD",
-                                           "GW",       "CC",    "CAS",    "comments"};
+                                           "GW",       "CC",    "FCI",    "comments"};
   for(auto& el: jinput.items()) {
     if(std::find(valid_sections.begin(), valid_sections.end(), el.key()) == valid_sections.end())
       tamm_terminate("INPUT FILE ERROR: Invalid section [" + el.key() + "] in the input file");
@@ -657,7 +677,7 @@ parse_json(json& jinput) {
   CDOptions   cd_options(options);
   GWOptions   gw_options(options);
   CCSDOptions ccsd_options(options);
-  CASOptions  cas_options(options);
+  FCIOptions  fci_options(options);
 
   // SCF
   // clang-format off
@@ -759,7 +779,7 @@ parse_json(json& jinput) {
     "CCSD(T)",     "DLPNO",     "EOMCCSD",        "RT-EOMCC",      "GFCCSD",
     "comments",    "threshold", "force_tilesize", "tilesize",      "itilesize",
     "lshift",      "ndiis",     "ccsd_maxiter",   "freeze_core",   "freeze_virtual",
-    "printtol",    "readt",     "writet",         "writev",        "writet_iter",
+    "print",       "readt",     "writet",         "writev",        "writet_iter",
     "debug",       "nactive",   "profile_ccsd",   "balance_tiles", "ext_data_path",
     "computeTData"};
   for(auto& el: jcc.items()) {
@@ -773,7 +793,6 @@ parse_json(json& jinput) {
   parse_option<int>   (ccsd_options.freeze_core   , jcc, "freeze_core");
   parse_option<int>   (ccsd_options.freeze_virtual, jcc, "freeze_virtual");
   parse_option<double>(ccsd_options.lshift        , jcc, "lshift");
-  parse_option<double>(ccsd_options.printtol      , jcc, "printtol");
   parse_option<double>(ccsd_options.threshold     , jcc, "threshold");
   parse_option<int>   (ccsd_options.tilesize      , jcc, "tilesize");
   parse_option<int>   (ccsd_options.itilesize     , jcc, "itilesize");
@@ -787,6 +806,10 @@ parse_json(json& jinput) {
   parse_option<bool>  (ccsd_options.force_tilesize, jcc, "force_tilesize");
   parse_option<string>(ccsd_options.ext_data_path , jcc, "ext_data_path");
   parse_option<bool>  (ccsd_options.computeTData  , jcc, "computeTData");
+
+  json jcc_print = jcc["print"];
+  parse_option<bool> (ccsd_options.ccsd_diagnostics, jcc_print, "ccsd_diagnostics");
+  parse_option<std::pair<bool, double>>(ccsd_options.tamplitudes, jcc_print, "tamplitudes");
 
   //RT-EOMCC
   json jrt_eom = jcc["RT-EOMCC"];
@@ -875,24 +898,52 @@ parse_json(json& jinput) {
       tamm_terminate("gf_p_oi_range can only be one of 1 or 2");
   }
 
-  json                      jcas = jinput["CAS"];
-  const std::vector<string> valid_cas{"MOLMPS", // Not used yet
-                                      "norb", "nel", "FCIDUMP"};
+  // FCI
+  json                      jfci = jinput["FCI"];
+  const std::vector<string> valid_fci{"nalpha", "nbeta",     "nactive", "ninactive",
+                                      "job",    "expansion", "MCSCF",   "PRINT"};
 
-  for(auto& el: jcas.items()) {
-    if(std::find(valid_cas.begin(), valid_cas.end(), el.key()) == valid_cas.end())
-      tamm_terminate("INPUT FILE ERROR: Invalid CAS option [" + el.key() + "] in the input file");
+  for(auto& el: jfci.items()) {
+    if(std::find(valid_fci.begin(), valid_fci.end(), el.key()) == valid_fci.end())
+      tamm_terminate("INPUT FILE ERROR: Invalid FCI option [" + el.key() + "] in the input file");
   }
 
-  parse_option<int>(cas_options.norb, jcas, "norb");
-  parse_option<int>(cas_options.nel, jcas, "nel");
-  parse_option<bool>(cas_options.FCIDUMP, jcas, "FCIDUMP");
+  // clang-format off
+  parse_option<int>(fci_options.nalpha,       jfci, "nalpha");
+  parse_option<int>(fci_options.nbeta,        jfci, "nbeta");
+  parse_option<int>(fci_options.nactive,      jfci, "nactive");
+  parse_option<int>(fci_options.ninactive,    jfci, "ninactive");
+  parse_option<string>(fci_options.job,       jfci, "job");
+  parse_option<string>(fci_options.expansion, jfci, "expansion");
+
+  // MCSCF
+  json jmcscf = jfci["MCSCF"];
+  parse_option<int>   (fci_options.max_macro_iter,     jmcscf, "max_macro_iter");
+  parse_option<double>(fci_options.max_orbital_step,   jmcscf, "max_orbital_step");
+  parse_option<double>(fci_options.orb_grad_tol_mcscf, jmcscf, "orb_grad_tol_mcscf");
+  parse_option<bool>  (fci_options.enable_diis,        jmcscf, "enable_diis");
+  parse_option<int>   (fci_options.diis_start_iter,    jmcscf, "diis_start_iter");
+  parse_option<int>   (fci_options.diis_nkeep,         jmcscf, "diis_nkeep");
+  parse_option<double>(fci_options.ci_res_tol,         jmcscf, "ci_res_tol");
+  parse_option<int>   (fci_options.ci_max_subspace,    jmcscf, "ci_max_subspace");
+  parse_option<double>(fci_options.ci_matel_tol,       jmcscf, "ci_matel_tol");
+
+  // PRINT
+  json jprint = jfci["PRINT"];
+  parse_option<bool>(fci_options.print_davidson,    jprint, "print_davidson");
+  parse_option<bool>(fci_options.print_ci,          jprint, "print_ci");
+  parse_option<bool>(fci_options.print_mcscf,       jprint, "print_mcscf");
+  parse_option<bool>(fci_options.print_diis,        jprint, "print_diis");
+  parse_option<bool>(fci_options.print_asci_search, jprint, "print_asci_search");
+  parse_option<std::pair<bool, double>>(fci_options.print_state_char, jprint, "print_state_char");
+
+  // clang-format on
 
   // options.print();
   // scf_options.print();
   // ccsd_options.print();
 
-  return std::make_tuple(options, scf_options, cd_options, gw_options, ccsd_options, cas_options);
+  return std::make_tuple(options, scf_options, cd_options, gw_options, ccsd_options, fci_options);
 }
 
 class json_sax_no_exception: public nlohmann::detail::json_sax_dom_parser<json> {
@@ -952,7 +1003,7 @@ inline std::tuple<OptionsMap, json> parse_input(std::istream& is) {
     atom_symbol_map[Z] = element_symbol;
   }
 
-  auto [options, scf_options, cd_options, gw_options, ccsd_options, cas_options] =
+  auto [options, scf_options, cd_options, gw_options, ccsd_options, fci_options] =
     parse_json(jinput);
 
   json jgeom_bohr;
@@ -1007,7 +1058,7 @@ inline std::tuple<OptionsMap, json> parse_input(std::istream& is) {
     ccsd_options.eom_microiter = ccsd_options.maxiter;
 
   options_map.ccsd_options = ccsd_options;
-  options_map.cas_options  = cas_options;
+  options_map.fci_options  = fci_options;
 
   return std::make_tuple(options_map, jinput);
 }

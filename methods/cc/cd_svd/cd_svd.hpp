@@ -326,7 +326,6 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
   Matrix lcao_eig(nao, N);
   lcao_eig.setZero();
   tamm_to_eigen_tensor(lcao, lcao_eig);
-  TensorType* k_movecs_sorted = lcao_eig.data();
 
   // Cholesky decomposition
   if(rank == 0) {

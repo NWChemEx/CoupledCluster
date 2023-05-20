@@ -26,7 +26,7 @@
 #include <tuple>
 #include <vector>
 
-//#include "scf_iter.hpp"
+// #include "scf_iter.hpp"
 #include "scf_taskmap.hpp"
 
 #include <filesystem>
@@ -195,13 +195,13 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
   SCFVars scf_vars; // init vars
 
   // Compute Nuclear repulsion energy.
-  auto [ndocc, enuc] = compute_NRE(exc, atoms, sys_data.focc);
+  auto [nelectrons, enuc] = compute_NRE(exc, atoms);
   // Might be actually useful to store?
   sys_data.results["output"]["SCF"]["nucl_rep_energy"] = enuc;
 
   // Compute number of electrons.
-  const auto nelectrons = sys_data.focc * ndocc - charge;
-  sys_data.nelectrons   = nelectrons;
+  nelectrons -= charge;
+  sys_data.nelectrons = nelectrons;
   EXPECTS((nelectrons + scf_options.multiplicity - 1) % 2 == 0);
 
   sys_data.nelectrons_alpha = (nelectrons + scf_options.multiplicity - 1) / 2;
@@ -680,7 +680,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       ttensors.Zxy_tamm   = Tensor<TensorType>{scf_vars.tdfAO, tAO, tAO}; // ndf,n,n
       ttensors.xyK_tamm   = Tensor<TensorType>{tAO, tAO, scf_vars.tdfAO}; // n,n,ndf
       ttensors.C_occ_tamm = Tensor<TensorType>{tAO, scf_vars.tdfCocc};    // n,nocc
-      Tensor<TensorType>::allocate(&ec, ttensors.xyK_tamm, ttensors.C_occ_tamm, ttensors.Zxy_tamm);
+      Tensor<TensorType>::allocate(&ec, ttensors.xyK_tamm, ttensors.C_occ_tamm);
     }
 
     if(rank == 0) {
@@ -730,9 +730,9 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 
       if(is_uhf) { sch(ttensors.F_beta_tmp() = 0).execute(); }
       // F1 = H1 + F_alpha_tmp
-      compute_2bf<TensorType>(ec, sys_data, scf_vars, obs, do_schwarz_screen, shell2bf, SchwarzK,
-                              max_nprim4, shells, ttensors, etensors, is_3c_init,
-                              do_density_fitting, xHF);
+      compute_2bf<TensorType>(ec, scalapack_info, sys_data, scf_vars, obs, do_schwarz_screen,
+                              shell2bf, SchwarzK, max_nprim4, shells, ttensors, etensors,
+                              is_3c_init, do_density_fitting, xHF);
 
       TensorType gauxc_exc = 0.;
 #if defined(USE_GAUXC)
@@ -793,9 +793,9 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       // if(rank==0) cout << std::setprecision(18) << "norm of D_tamm: " << D_tamm_nrm << endl;
 
       // build a new Fock matrix
-      compute_2bf<TensorType>(ec, sys_data, scf_vars, obs, do_schwarz_screen, shell2bf, SchwarzK,
-                              max_nprim4, shells, ttensors, etensors, is_3c_init,
-                              do_density_fitting, xHF);
+      compute_2bf<TensorType>(ec, scalapack_info, sys_data, scf_vars, obs, do_schwarz_screen,
+                              shell2bf, SchwarzK, max_nprim4, shells, ttensors, etensors,
+                              is_3c_init, do_density_fitting, xHF);
 
       // E_Diis
       if(ediis) {
@@ -883,7 +883,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
 
       if(scf_conv) break;
 
-      if(debug) print_energies(ec, ttensors, sys_data, debug);
+      if(debug) print_energies(ec, ttensors, sys_data, scf_vars, debug);
 
     } while((fabs(ediff) > conve) || (fabs(rmsd) > convd)); // SCF main loop
 
@@ -902,9 +902,9 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       if(is_uhf) sch(ttensors.F_beta_tmp() = 0).execute();
 
       // build a new Fock matrix
-      compute_2bf<TensorType>(ec, sys_data, scf_vars, obs, do_schwarz_screen, shell2bf, SchwarzK,
-                              max_nprim4, shells, ttensors, etensors, is_3c_init,
-                              do_density_fitting, 1.0);
+      compute_2bf<TensorType>(ec, scalapack_info, sys_data, scf_vars, obs, do_schwarz_screen,
+                              shell2bf, SchwarzK, max_nprim4, shells, ttensors, etensors,
+                              is_3c_init, do_density_fitting, 1.0);
       // clang-format off
       sch (ttensors.F_alpha()  = ttensors.H1())
           (ttensors.F_alpha() += ttensors.F_alpha_tmp())
@@ -934,7 +934,7 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     if(rank == 0)
       std::cout << std::endl
                 << "Nuclear repulsion energy = " << std::setprecision(15) << enuc << endl;
-    print_energies(ec, ttensors, sys_data);
+    print_energies(ec, ttensors, sys_data, scf_vars);
 
     if(rank == 0 && !scf_conv) {
       cout << "writing orbitals and density to file... ";
@@ -956,10 +956,9 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     if(is_uhf) sch(Fb_global(mu, nu) = ttensors.F_beta(mu, nu));
     sch.execute();
 
-    if(do_density_fitting)
-      Tensor<TensorType>::deallocate(ttensors.xyK_tamm, ttensors.C_occ_tamm, ttensors.Zxy_tamm);
+    if(do_density_fitting) Tensor<TensorType>::deallocate(ttensors.xyK_tamm, ttensors.C_occ_tamm);
 
-    if(scf_options.mos_txt) write_to_disk<TensorType>(ttensors.H1, files_prefix + ".hcore");
+    write_to_disk<TensorType>(ttensors.H1, files_prefix + ".hcore");
 
     Tensor<TensorType>::deallocate(ttensors.H1, ttensors.S1, ttensors.T1, ttensors.V1,
                                    ttensors.F_alpha_tmp, ttensors.ehf_tmp, ttensors.ehf_tamm,

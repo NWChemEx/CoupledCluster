@@ -205,9 +205,6 @@
         "ccsd_maxiter": {
           "type": "integer"
         },
-        "printtol": {
-          "type": "number"
-        },
         "readt": {
           "type": "boolean"
         },

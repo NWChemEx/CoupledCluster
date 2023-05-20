@@ -524,20 +524,6 @@ inline void ccsd_stats(ExecutionContext& ec, double hf_energy, double residual, 
   }
 }
 
-// template<typename T>
-// void freeTensors(size_t ndiis, Tensor<T>& d_r1, Tensor<T>& d_r2, Tensor<T>& d_t1, Tensor<T>&
-// d_t2,
-//                    Tensor<T>& d_f1, std::vector<Tensor<T>>& d_r1s,
-//                    std::vector<Tensor<T>>& d_r2s, std::vector<Tensor<T>>& d_t1s,
-//                    std::vector<Tensor<T>>& d_t2s) {
-
-//   for(auto i=0; i<ndiis; i++)
-//     Tensor<T>::deallocate(d_r1s[i], d_r2s[i], d_t1s[i], d_t2s[i]);
-//   d_r1s.clear(); d_r2s.clear();
-//   d_t1s.clear(); d_t2s.clear();
-//   Tensor<T>::deallocate(d_r1, d_r2, d_t1, d_t2, d_f1);//, d_v2);
-// }
-
 inline auto free_vec_tensors = [](auto&&... vecx) {
   (std::for_each(vecx.begin(), vecx.end(), [](auto& t) { t.deallocate(); }), ...);
 };
@@ -641,7 +627,8 @@ setupV2Tensors(ExecutionContext& ec, Tensor<T> cholVpr, ExecutionHW ex_hw = Exec
 
 template<typename T>
 Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI, Tensor<T> cholVpr,
-                  const tamm::Tile chol_count, ExecutionHW hw = ExecutionHW::CPU) {
+                  const tamm::Tile chol_count, ExecutionHW hw = ExecutionHW::CPU,
+                  bool anti_sym = true) {
   auto rank = ec.pg().rank();
 
   TiledIndexSpace N = MO("all");
@@ -657,9 +644,11 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
 
   auto cc_t1 = std::chrono::high_resolution_clock::now();
   // clang-format off
-  Scheduler{ec}(d_v2(p, q, r, s)  = cholVpr(p, r, cindex) * cholVpr(q, s, cindex))
-                (d_v2(p, q, r, s) += -1.0 * cholVpr(p, s, cindex) * cholVpr(q, r, cindex))
-                .execute(hw);
+  Scheduler sch{ec};
+  sch(d_v2(p, q, r, s)  = cholVpr(p, r, cindex) * cholVpr(q, s, cindex));
+  if(anti_sym)
+    sch(d_v2(p, q, r, s) += -1.0 * cholVpr(p, s, cindex) * cholVpr(q, r, cindex));
+  sch.execute(hw);
   // clang-format on
 
   auto   cc_t2 = std::chrono::high_resolution_clock::now();
@@ -672,6 +661,79 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
 
   // Tensor<T>::deallocate(d_a2);
   return d_v2;
+}
+
+template<typename T>
+void cc_print(SystemData& sys_data, Tensor<T> d_t1, Tensor<T> d_t2, std::string files_prefix) {
+  CCSDOptions&      ccsd_options = sys_data.options_map.ccsd_options;
+  ExecutionContext& ec           = get_ec(d_t1());
+
+  if(ccsd_options.tamplitudes.first) {
+    if(ec.print()) {
+      auto printtol = ccsd_options.tamplitudes.second;
+      std::cout << std::endl
+                << "Threshold for printing amplitudes set to: " << printtol << std::endl;
+      std::cout << "T1, T2 amplitudes written to files: " << files_prefix + ".print_t1amp.txt"
+                << ", " << files_prefix + ".print_t2amp.txt" << std::endl
+                << std::endl;
+      print_max_above_threshold(d_t1, printtol, files_prefix + ".print_t1amp.txt");
+      print_max_above_threshold(d_t2, printtol, files_prefix + ".print_t2amp.txt");
+    }
+  }
+
+  if(ccsd_options.ccsd_diagnostics) {
+    const bool       rhf     = sys_data.is_restricted;
+    const TensorType t1_norm = tamm::norm(d_t1);
+    TensorType       t1_diag = std::sqrt(t1_norm * t1_norm * 1.0 / sys_data.nelectrons);
+    TensorType       d1_diag{}, d2_diag{};
+
+    tamm::TiledIndexSpace v1_tis = d_t1.tiled_index_spaces()[0];
+    tamm::TiledIndexSpace o1_tis = d_t1.tiled_index_spaces()[1];
+    auto [h1_1, h2_1]            = o1_tis.labels<2>("all");
+    auto [p1_1, p2_1]            = v1_tis.labels<2>("all");
+
+    tamm::TiledIndexSpace v2_tis = d_t2.tiled_index_spaces()[1];
+    tamm::TiledIndexSpace o2_tis = d_t2.tiled_index_spaces()[3];
+    auto [h1_2, h2_2]            = o2_tis.labels<2>("all");
+    auto [p1_2, p2_2]            = v2_tis.labels<2>("all");
+
+    Scheduler          sch{ec};
+    Tensor<TensorType> d1_ij{o1_tis, o1_tis}, d1_ab{v1_tis, v1_tis};
+    Tensor<TensorType> d2_ij{o1_tis, o1_tis}, d2_ab{v1_tis, v1_tis};
+
+    if(rhf) {
+      // clang-format off
+      sch.allocate(d1_ij,d1_ab,d2_ij,d2_ab)
+      // D1 diagnostic: Janssen, et. al Chem. Phys. Lett. 290 (1998) 423
+      (d1_ab(p1_1,p2_1) = d_t1(p1_1,h1_1)*d_t1(p2_1,h1_1))
+      (d1_ij(h1_1,h2_1) = d_t1(p1_1,h1_1)*d_t1(p1_1,h2_1))
+      // D2 diagnostic: Nielsen, et. al Chem. Phys. Lett. 310 (1999) 568
+      (d2_ab(p1_1,p2_1) = d_t2(p1_1,p1_2,h1_1,h1_2)*d_t2(p2_1,p1_2,h1_1,h1_2))
+      (d2_ij(h1_1,h2_1) = d_t2(p1_1,p1_2,h1_1,h1_2)*d_t2(p1_1,p1_2,h2_1,h1_2))
+      .execute(ec.exhw());
+      // clang-format on
+    }
+
+    if(ec.print()) {
+      auto get_diag_val = [&](const Tensor<T>& diag) {
+        Matrix                                diag_eig = tamm_to_eigen_matrix(diag);
+        Eigen::SelfAdjointEigenSolver<Matrix> ev_diag(diag_eig);
+        auto                                  evals = ev_diag.eigenvalues();
+        evals                                       = (evals.array().abs()).sqrt();
+        return *(std::max_element(evals.data(), evals.data() + evals.rows()));
+      };
+
+      if(rhf) {
+        d1_diag = std::max(get_diag_val(d1_ij), get_diag_val(d1_ab));
+        d2_diag = std::max(get_diag_val(d2_ij), get_diag_val(d2_ab));
+      }
+      std::cout << std::fixed << std::setprecision(12);
+      std::cout << "CC T1 diagnostic = " << t1_diag << std::endl;
+      std::cout << "CC D1 diagnostic = " << d1_diag << std::endl;
+      std::cout << "CC D2 diagnostic = " << d2_diag << std::endl;
+    }
+    if(rhf) free_tensors(d1_ij, d1_ab, d2_ij, d2_ab);
+  }
 }
 
 template<typename T>

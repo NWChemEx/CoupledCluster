@@ -275,16 +275,7 @@ void ccsd_t_driver() {
                   << std::setprecision(2) << ccsd_time << " secs" << std::endl;
     }
 
-    double printtol = ccsd_options.printtol;
-    if(rank == 0 && debug) {
-      std::cout << std::endl
-                << "Threshold for printing amplitudes set to: " << printtol << std::endl;
-      std::cout << "T1, T2 amplitudes written to files: " << files_prefix + ".print_t1amp.txt"
-                << ", " << files_prefix + ".print_t2amp.txt" << std::endl
-                << std::endl;
-      print_max_above_threshold(d_t1, printtol, files_prefix + ".print_t1amp.txt");
-      print_max_above_threshold(d_t2, printtol, files_prefix + ".print_t2amp.txt");
-    }
+    cc_print(sys_data, d_t1, d_t2, files_prefix);
 
     if(!ccsd_restart) {
       free_tensors(d_r1, d_r2);

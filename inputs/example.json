@@ -82,7 +82,6 @@
         "nactive": 0,
         "freeze_core": 0,
         "freeze_virtual": 0,
-        "printtol": 0.05,
 
         "readt": false,
         "writet": false,
@@ -94,7 +93,12 @@
         "balance_tiles": true,
 
         "ext_data_path": "",
-    
+
+        "print": {
+          "tamplitudes": [false,0.05],
+          "ccsd_diagnostics" : false
+        },
+
         "CCSD(T)": {
           "cache_size": 8,
           "skip_ccsd": false,

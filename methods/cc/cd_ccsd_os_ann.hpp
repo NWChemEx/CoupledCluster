@@ -427,7 +427,7 @@ void ccsd_t2_os(Scheduler& sch, const TiledIndexSpace& MO, const TiledIndexSpace
     // LabelLoopNest inner_loop{reduction_lbls};
     LabelLoopNest inner_loop{reduction_labels};
 
-    int loop_counter = 0;
+    // int loop_counter = 0;
 
     TensorElType1* cbuf_dev_ptr{nullptr};
     TensorElType1* cbuf_tmp_dev_ptr{nullptr};

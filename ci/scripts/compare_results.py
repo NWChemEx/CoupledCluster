@@ -17,8 +17,8 @@ ref_res_path = os.path.abspath(str(sys.argv[1]))
 cur_res_path = os.path.abspath(str(sys.argv[2]))
 file_compare = False
 
-wmsg = False
-if len(sys.argv) == 4: wmsg = True
+upcxx = False
+if len(sys.argv) == 4: upcxx = True
 
 #check if above paths exist
 if not os.path.exists(ref_res_path): 
@@ -56,9 +56,11 @@ def check_results(ref_energy,cur_energy,ccsd_threshold,en_str):
         return False
     return True
 
+missing_tests=[]
 for ref_file in ref_files:
     if ref_file not in cur_files and not file_compare:
-        if wmsg: print("WARNING: " + ref_file + " not available in " + cur_res_path)
+        print("WARNING: " + ref_file + " not available in " + cur_res_path)
+        missing_tests.append(ref_file)
         #sys.exit(1)
         continue
     
@@ -132,3 +134,10 @@ for ref_file in ref_files:
 
     print(" ... OK")
 
+if not missing_tests:
+    print(" **** ALL TESTS PASS ****")
+else: 
+    missing_tests = [os.path.splitext(x)[0] for x in missing_tests]
+    print(" ************ The following tests failed ************** ")
+    print("\n".join(missing_tests))
+    sys.exit(1)

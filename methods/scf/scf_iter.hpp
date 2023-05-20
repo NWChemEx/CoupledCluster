@@ -26,9 +26,10 @@ scf_iter_body(ExecutionContext& ec, ScalapackInfo& scalapack_info, const int& it
 #endif
               bool scf_restart = false) {
 
-  const bool is_uhf = sys_data.is_unrestricted;
-  const bool is_rhf = sys_data.is_restricted;
-  const bool is_ks  = sys_data.is_ks;
+  const bool   is_uhf = sys_data.is_unrestricted;
+  const bool   is_rhf = sys_data.is_restricted;
+  const bool   is_ks  = sys_data.is_ks;
+  const double lshift = sys_data.options_map.scf_options.lshift;
 
   Tensor<TensorType>& H1       = ttensors.H1;
   Tensor<TensorType>& S1       = ttensors.S1;
@@ -201,6 +202,26 @@ scf_iter_body(ExecutionContext& ec, ScalapackInfo& scalapack_info, const int& it
   }
 
   if(!scf_restart) {
+    if(lshift > 0) {
+      double lval = is_rhf ? 0.5 * lshift : lshift;
+
+      // clang-format off
+      sch
+      (ehf_tmp(mu,ku) = S1(mu,nu) * D_last_alpha_tamm(nu,ku))
+      (F_alpha(mu,ku) -= lval * ehf_tmp(mu,nu) * S1(nu,ku))
+      .execute();
+      // clang-format on
+
+      if(is_uhf) {
+        // clang-format off
+        sch
+        (ehf_tmp(mu,ku) = S1(mu,nu) * D_last_beta_tamm(nu,ku))
+        (F_beta(mu,ku) -= lval * ehf_tmp(mu,nu) * S1(nu,ku))
+        .execute();
+        // clang-format on
+      }
+    }
+
     auto do_t1 = std::chrono::high_resolution_clock::now();
 
     scf_diagonalize<TensorType>(sch, sys_data, scalapack_info, ttensors, etensors);
@@ -381,12 +402,12 @@ compute_2bf_taskinfo(ExecutionContext& ec, const SystemData& sys_data, const SCF
 }
 
 template<typename TensorType>
-void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars& scf_vars,
-                 const libint2::BasisSet& obs, const bool do_schwarz_screen,
-                 const std::vector<size_t>& shell2bf, const Matrix& SchwarzK,
-                 const size_t& max_nprim4, libint2::BasisSet& shells, TAMMTensors& ttensors,
-                 EigenTensors& etensors, bool& is_3c_init, const bool do_density_fitting = false,
-                 double xHF = 1.) {
+void compute_2bf(ExecutionContext& ec, ScalapackInfo& scalapack_info, const SystemData& sys_data,
+                 const SCFVars& scf_vars, const libint2::BasisSet& obs,
+                 const bool do_schwarz_screen, const std::vector<size_t>& shell2bf,
+                 const Matrix& SchwarzK, const size_t& max_nprim4, libint2::BasisSet& shells,
+                 TAMMTensors& ttensors, EigenTensors& etensors, bool& is_3c_init,
+                 const bool do_density_fitting = false, double xHF = 1.) {
   using libint2::Operator;
 
   const bool is_uhf = sys_data.is_unrestricted;
@@ -400,7 +421,6 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
   // Tensor<TensorType>& F_dummy  = ttensors.F_dummy;
   Tensor<TensorType>& F_alpha_tmp = ttensors.F_alpha_tmp;
   Tensor<TensorType>& F_beta_tmp  = ttensors.F_beta_tmp;
-  Tensor<TensorType>& Zxy_tamm    = ttensors.Zxy_tamm;
   Tensor<TensorType>& xyK_tamm    = ttensors.xyK_tamm;
 
   double fock_precision = std::min(sys_data.options_map.scf_options.tol_int,
@@ -591,7 +611,6 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
     // ec.pg().barrier();
   }
   else {
-#if 1
     using libint2::BraKet;
     using libint2::Engine;
     using libint2::Operator;
@@ -605,6 +624,9 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
     auto                         mu = scf_vars.mu, nu = scf_vars.nu, ku = scf_vars.ku;
     auto                         d_mu = scf_vars.d_mu, d_nu = scf_vars.d_nu, d_ku = scf_vars.d_ku;
     const tamm::TiledIndexLabel& dCocc_til = scf_vars.dCocc_til;
+
+    Scheduler   sch{ec};
+    ExecutionHW exhw = ec.exhw();
 
     // using first time? compute 3-center ints and transform to inv sqrt
     // representation
@@ -623,9 +645,9 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
       auto        shell2bf_df = dfbs.shell2bf();
       const auto& results     = engine.results();
 
-      // Tensor<TensorType>::allocate(&ec, Zxy_tamm);
+      Tensor<TensorType>& Zxy_tamm = ttensors.Zxy_tamm;
+      Tensor<TensorType>::allocate(&ec, Zxy_tamm);
 
-#if 1
       // TODO: Screening?
       auto compute_2body_fock_dfC_lambda = [&](const IndexVector& blockid) {
         auto bi0 = blockid[0];
@@ -695,8 +717,7 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
 
       do_t2   = std::chrono::high_resolution_clock::now();
       do_time = std::chrono::duration_cast<std::chrono::duration<double>>((do_t2 - do_t1)).count();
-      if(rank == 0 && debug) std::cout << "2BF-DFC:" << do_time << "s, ";
-#endif
+      if(rank == 0 && debug) std::cout << "2BF-DFC: " << do_time << "s, ";
 
       Tensor<TensorType> K_tamm{scf_vars.tdfAO, scf_vars.tdfAO}; // ndf,ndf
       Tensor<TensorType>::allocate(&ec, K_tamm);
@@ -772,29 +793,73 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
 
       block_for(ec, K_tamm(), compute_2body_2index_ints_lambda);
 
-      Matrix V(ndf, ndf);
-      V.setZero();
-      tamm_to_eigen_tensor(K_tamm, V);
+      Matrix          V;
+      Eigen::VectorXd eps(ndf);
 
-#if 1
       auto ig1 = std::chrono::high_resolution_clock::now();
 
-      std::vector<TensorType> eps(ndf);
-      lapack::syevd(lapack::Job::Vec, lapack::Uplo::Lower, ndf, V.data(), ndf, eps.data());
+#if defined(USE_SCALAPACK)
+      Tensor<TensorType> V_sca;
+      if(scalapack_info.comm != MPI_COMM_NULL) {
+        blacspp::Grid*                  blacs_grid       = scalapack_info.blacs_grid.get();
+        const auto&                     grid             = *blacs_grid;
+        scalapackpp::BlockCyclicDist2D* blockcyclic_dist = scalapack_info.blockcyclic_dist.get();
+        const tamm::Tile                mb               = blockcyclic_dist->mb();
 
-      Matrix Vp = V;
+        TiledIndexSpace    tN_bc{IndexSpace{range(ndf)}, mb};
+        Tensor<TensorType> S_BC{tN_bc, tN_bc};
+        V_sca = {tN_bc, tN_bc};
+        S_BC.set_block_cyclic({scalapack_info.npr, scalapack_info.npc});
+        V_sca.set_block_cyclic({scalapack_info.npr, scalapack_info.npc});
+        Tensor<TensorType>::allocate(&scalapack_info.ec, S_BC, V_sca);
 
-      for(size_t j = 0; j < ndf; ++j) {
-        double tmp = 1.0 / sqrt(eps[j]);
-        blas::scal(ndf, tmp, Vp.data() + j * ndf, 1);
+        tamm::to_block_cyclic_tensor(K_tamm, S_BC);
+
+        auto desc_lambda = [&](const int64_t M, const int64_t N) {
+          auto [M_loc, N_loc] = (*blockcyclic_dist).get_local_dims(M, N);
+          return (*blockcyclic_dist).descinit_noerror(M, N, M_loc);
+        };
+
+        if(grid.ipr() >= 0 and grid.ipc() >= 0) {
+          auto desc_S = desc_lambda(ndf, ndf);
+          auto desc_V = desc_lambda(ndf, ndf);
+          // scalapackpp::BlockCyclicMatrix<TensorType> V_sca(grid, N, N, mb, mb);
+
+          auto info = scalapackpp::hereig(scalapackpp::Job::Vec, scalapackpp::Uplo::Lower,
+                                          desc_S[2], S_BC.access_local_buf(), 1, 1, desc_S,
+                                          eps.data(), V_sca.access_local_buf(), 1, 1, desc_V);
+        }
+
+        Tensor<TensorType>::deallocate(S_BC);
+        if(scalapack_info.pg.rank() == 0) V = tamm_to_eigen_matrix<TensorType>(V_sca);
+        Tensor<TensorType>::deallocate(V_sca);
       }
 
-      Matrix ke(ndf, ndf);
-      blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::Trans, ndf, ndf, ndf, 1,
-                 Vp.data(), ndf, V.data(), ndf, 0, ke.data(), ndf);
-      eigen_to_tamm_tensor(K_tamm, ke);
+#else
+      if(rank == 0) {
+        V.setZero(ndf, ndf);
+        tamm_to_eigen_tensor(K_tamm, V);
 
-      // Scheduler{ec}
+        lapack::syevd(lapack::Job::Vec, lapack::Uplo::Lower, ndf, V.data(), ndf, eps.data());
+      }
+#endif
+
+      if(rank == 0) {
+        Matrix Vp = V;
+
+        for(size_t j = 0; j < ndf; ++j) {
+          double tmp = 1.0 / sqrt(eps(j));
+          blas::scal(ndf, tmp, Vp.data() + j * ndf, 1);
+        }
+
+        Matrix ke(ndf, ndf);
+        blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::Trans, ndf, ndf, ndf, 1,
+                   Vp.data(), ndf, V.data(), ndf, 0, ke.data(), ndf);
+        eigen_to_tamm_tensor(K_tamm, ke);
+        V.resize(0, 0);
+      }
+      eps.resize(0);
+      // sch
       // (k_tmp(d_mu,d_nu) = V_tamm(d_ku,d_mu) * V_tamm(d_ku,d_nu))
       // (K_tamm(d_mu,d_nu) = eps_tamm(d_mu,d_ku) * k_tmp(d_ku,d_nu)) .execute();
 
@@ -803,20 +868,19 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
       auto ig2    = std::chrono::high_resolution_clock::now();
       auto igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
 
-      if(rank == 0 && debug) std::cout << "V^-1/2:" << igtime << "s, ";
-
-#endif
+      if(rank == 0 && debug)
+        std::cout << std::fixed << std::setprecision(2) << "V^-1/2: " << igtime << "s, ";
 
       // contract(1.0, Zxy, {1, 2, 3}, K, {1, 4}, 0.0, xyK, {2, 3, 4});
       // Tensor3D xyK = Zxy.contract(K,aidx_00);
-      Scheduler{ec}(xyK_tamm(mu, nu, d_nu) = Zxy_tamm(d_mu, mu, nu) * K_tamm(d_mu, d_nu)).execute();
-      Tensor<TensorType>::deallocate(K_tamm); // release memory Zxy_tamm
+      sch(xyK_tamm(mu, nu, d_nu) = Zxy_tamm(d_mu, mu, nu) * K_tamm(d_mu, d_nu))
+        .deallocate(K_tamm, Zxy_tamm) // release memory Zxy_tamm
+        .execute(exhw);
 
     } // if (!is_3c_init)
 
-    Scheduler sch{ec};
-    auto      ig1  = std::chrono::high_resolution_clock::now();
-    auto      tig1 = ig1;
+    auto ig1  = std::chrono::high_resolution_clock::now();
+    auto tig1 = ig1;
 
     Tensor<TensorType>  Jtmp_tamm{scf_vars.tdfAO};                                // ndf
     Tensor<TensorType>  xiK_tamm{scf_vars.tAO, scf_vars.tdfCocc, scf_vars.tdfAO}; // n, nocc, ndf
@@ -827,27 +891,29 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
     auto ig2    = std::chrono::high_resolution_clock::now();
     auto igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
     ec.pg().barrier();
-    if(rank == 0 && debug) std::cout << " C_occ_tamm <- C_occ:" << igtime << "s, ";
+    // if(rank == 0 && debug) std::cout << " C_occ_tamm <- C_occ: " << igtime << "s, ";
 
     ig1 = std::chrono::high_resolution_clock::now();
     // contract(1.0, xyK, {1, 2, 3}, Co, {2, 4}, 0.0, xiK, {1, 4, 3});
     sch.allocate(xiK_tamm, Jtmp_tamm).execute();
     sch(xiK_tamm(mu, dCocc_til, d_mu) = xyK_tamm(mu, nu, d_mu) * C_occ_tamm(nu, dCocc_til))
-      .execute();
+      .execute(exhw);
 
     ig2    = std::chrono::high_resolution_clock::now();
     igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
-    if(rank == 0 && debug) std::cout << " xiK_tamm:" << igtime << "s, ";
+    if(rank == 0 && debug)
+      std::cout << " xiK_tamm: " << std::fixed << std::setprecision(2) << igtime << "s, ";
 
     ig1 = std::chrono::high_resolution_clock::now();
     // compute Coulomb
     // contract(1.0, xiK, {1, 2, 3}, Co, {1, 2}, 0.0, Jtmp, {3});
     // Jtmp = xiK.contract(Co,idx_0011);
-    sch(Jtmp_tamm(d_mu) = xiK_tamm(mu, dCocc_til, d_mu) * C_occ_tamm(mu, dCocc_til)).execute();
+    sch(Jtmp_tamm(d_mu) = xiK_tamm(mu, dCocc_til, d_mu) * C_occ_tamm(mu, dCocc_til)).execute(exhw);
 
     ig2    = std::chrono::high_resolution_clock::now();
     igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
-    if(rank == 0 && debug) std::cout << " Jtmp_tamm:" << igtime << "s, ";
+    if(rank == 0 && debug)
+      std::cout << " Jtmp_tamm: " << std::fixed << std::setprecision(2) << igtime << "s, ";
 
     ig1 = std::chrono::high_resolution_clock::now();
     // contract(1.0, xiK, {1, 2, 3}, xiK, {4, 2, 3}, 0.0, G, {1, 4});
@@ -856,31 +922,33 @@ void compute_2bf(ExecutionContext& ec, const SystemData& sys_data, const SCFVars
     sch(F_alpha_tmp(mu, ku) +=
         -1.0 * xHF * xiK_tamm(mu, dCocc_til, d_mu) * xiK_tamm(ku, dCocc_til, d_mu))
       .deallocate(xiK_tamm)
-      .execute();
+      .execute(exhw);
 
     ig2    = std::chrono::high_resolution_clock::now();
     igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
-    if(rank == 0 && debug) std::cout << " F_alpha_tmp:" << igtime << "s, ";
+    if(rank == 0 && debug)
+      std::cout << " F_alpha_tmp: " << std::fixed << std::setprecision(2) << igtime << "s, ";
 
     ig1 = std::chrono::high_resolution_clock::now();
     // contract(2.0, xyK, {1, 2, 3}, Jtmp, {3}, -1.0, G, {1, 2});
     //  Tensor2D J_ret = xyK.contract(Jtmp,aidx_20);
     sch(F_alpha_tmp(mu, nu) += 2.0 * xyK_tamm(mu, nu, d_mu) * Jtmp_tamm(d_mu))
       .deallocate(Jtmp_tamm)
-      .execute();
+      .execute(exhw);
     // (F_alpha_tmp(mu,nu) = 2.0 * J_ret_tamm(mu,nu))
     // (F_alpha_tmp(mu,nu) += -1.0 * K_ret_tamm(mu,nu)).execute();
 
     ig2    = std::chrono::high_resolution_clock::now();
     igtime = std::chrono::duration_cast<std::chrono::duration<double>>((ig2 - ig1)).count();
-    if(rank == 0 && debug) std::cout << " F_alpha_tmp:" << igtime << "s, ";
+    if(rank == 0 && debug)
+      std::cout << " F_alpha_tmp: " << std::fixed << std::setprecision(2) << igtime << "s, ";
 
     auto tig2    = std::chrono::high_resolution_clock::now();
     auto tigtime = std::chrono::duration_cast<std::chrono::duration<double>>((tig2 - tig1)).count();
 
-    if(rank == 0 && debug) std::cout << "3c contractions:" << tigtime << "s, ";
+    if(rank == 0 && debug)
+      std::cout << "3c contractions: " << std::fixed << std::setprecision(2) << tigtime << "s, ";
 
-#endif
   } // end density fitting
 }
 

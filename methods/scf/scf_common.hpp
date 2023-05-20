@@ -244,8 +244,8 @@ inline BasisSetMap construct_basisset_maps(std::vector<libint2::Atom>& atoms,
 
   for(size_t s1 = 0; s1 != nshells; ++s1) first_bf_shell[s1] = shells[s1].size();
 
-  std::map<int, std::string>              gaus_comp_map{{0, "s"}, {1, "p"}, {2, "d"},
-                                           {3, "f"}, {4, "g"}, {5, "h"}};
+  std::map<int, std::string>              gaus_comp_map{{0, "s"}, {1, "p"}, {2, "d"}, {3, "f"},
+                                           {4, "g"}, {5, "h"}, {6, "i"}};
   std::map<int, std::vector<std::string>> cart_comp_map{
     {1, {"x", "y", "z"}},
     {2, {"xx", "xy", "xz", "yy", "yz", "zz"}},
@@ -255,7 +255,11 @@ inline BasisSetMap construct_basisset_maps(std::vector<libint2::Atom>& atoms,
       "yyyz", "yyzz", "yzzz", "zzzz"}},
     {5, {"xxxxx", "xxxxy", "xxxxz", "xxxyy", "xxxyz", "xxxzz", "xxyyy",
          "xxyyz", "xxyzz", "xxzzz", "xyyyy", "xyyyz", "xyyzz", "xyzzz",
-         "xzzzz", "yyyyy", "yyyyz", "yyyzz", "yyzzz", "yzzzz", "zzzzz"}}};
+         "xzzzz", "yyyyy", "yyyyz", "yyyzz", "yyzzz", "yzzzz", "zzzzz"}},
+    {6, {"xxxxxx", "xxxxxy", "xxxxxz", "xxxxyy", "xxxxyz", "xxxxzz", "xxxyyy",
+         "xxxyyz", "xxxyzz", "xxxzzz", "xxyyyy", "xxyyyz", "xxyyzz", "xxyzzz",
+         "xxzzzz", "xyyyyy", "xyyyyz", "xyyyzz", "xyyzzz", "xyzzzz", "xzzzzz",
+         "yyyyyy", "yyyyyz", "yyyyzz", "yyyzzz", "yyzzzz", "yzzzzz", "zzzzzz"}}};
 
   for(size_t ai = 0; ai < natoms; ai++) {
     auto                        nshells_ai = a2s_map[ai].size();
@@ -303,7 +307,7 @@ inline BasisSetMap construct_basisset_maps(std::vector<libint2::Atom>& atoms,
             else if(i == 1) tmps << "_z";
             else if(i == 2) tmps << "_x";
           }
-          else if(l <= 5) tmps << std::showpos << i - l;
+          else if(l <= 6) tmps << std::showpos << i - l;
           else NOT_IMPLEMENTED();
           bf_comp[alo] = gaus_comp_map[l] + tmps.str();
           alo++;
@@ -315,7 +319,7 @@ inline BasisSetMap construct_basisset_maps(std::vector<libint2::Atom>& atoms,
         for(int i = 0; i < ncfuncs; i++) {
           std::string tmps;
           if(l == 0) tmps = "";
-          else if(l <= 5) tmps = "_" + cart_vec[i];
+          else if(l <= 6) tmps = "_" + cart_vec[i];
           else NOT_IMPLEMENTED();
           bf_comp[alo] = gaus_comp_map[l] + tmps;
           alo++;
@@ -457,7 +461,7 @@ inline void compute_shellpair_list(const ExecutionContext& ec, const libint2::Ba
 }
 
 inline std::tuple<int, double> compute_NRE(const ExecutionContext&     ec,
-                                           std::vector<libint2::Atom>& atoms, const int focc) {
+                                           std::vector<libint2::Atom>& atoms) {
   auto rank = ec.pg().rank();
   //  std::cout << "Geometries in bohr units " << std::endl;
   //  for (auto i = 0; i < atoms.size(); ++i)
@@ -466,7 +470,6 @@ inline std::tuple<int, double> compute_NRE(const ExecutionContext&     ec,
   // count the number of electrons
   auto nelectron = 0;
   for(size_t i = 0; i < atoms.size(); ++i) nelectron += atoms[i].atomic_number;
-  const auto ndocc = nelectron / focc;
 
   // compute the nuclear repulsion energy
   double enuc = 0.0;
@@ -480,7 +483,7 @@ inline std::tuple<int, double> compute_NRE(const ExecutionContext&     ec,
       enuc += atoms[i].atomic_number * atoms[j].atomic_number / r;
     }
 
-  return std::make_tuple(ndocc, enuc);
+  return std::make_tuple(nelectron, enuc);
 }
 
 inline void recompute_tilesize(tamm::Tile& tile_size, const int N, const bool force_ts,
@@ -684,7 +687,7 @@ double tt_trace(ExecutionContext& ec, Tensor<TensorType>& T1, Tensor<TensorType>
 }
 
 inline void print_energies(ExecutionContext& ec, TAMMTensors& ttensors, const SystemData& sys_data,
-                           bool debug = false) {
+                           SCFVars& scf_vars, bool debug = false) {
   const bool is_uhf = sys_data.is_unrestricted;
   const bool is_rhf = sys_data.is_restricted;
 
