@@ -250,7 +250,7 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                         size_T_d2_v2,
                         //
                         energy_l,
-#if defined(USE_CUDA) || defined(USE_DPCPP)
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
                         reduceData.get(),
 #endif
                         cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
@@ -353,7 +353,7 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                         size_T_d2_v2,
                         //
                         energy_l,
-#if defined(USE_CUDA) || defined(USE_DPCPP)
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
                         reduceData.get(),
 #endif
                         cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,

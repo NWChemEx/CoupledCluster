@@ -2907,4 +2907,24 @@ template void fully_fused_ccsd_t_gpu<double>(
   //
   double* dev_evl_sorted_h1b, double* dev_evl_sorted_h2b, double* dev_evl_sorted_h3b,
   double* dev_evl_sorted_p4b, double* dev_evl_sorted_p5b, double* dev_evl_sorted_p6b,
-  double* partial_energies);
+  double* partial_energies, gpuEvent_t* done_copy);
+// Explicit template instantiation: float
+template void fully_fused_ccsd_t_gpu<float>(
+  gpuStream_t& stream_id, size_t num_blocks, size_t base_size_h1b, size_t base_size_h2b,
+  size_t base_size_h3b, size_t base_size_p4b, size_t base_size_p5b, size_t base_size_p6b,
+  //
+  float* df_dev_d1_t2_all, float* df_dev_d1_v2_all, float* df_dev_d2_t2_all,
+  float* df_dev_d2_v2_all, float* df_dev_s1_t1_all, float* df_dev_s1_v2_all,
+  //
+  int* host_d1_size, int* host_d1_exec, // used
+  int* host_d2_size, int* host_d2_exec, int* host_s1_size, int* host_s1_exec,
+  //
+  size_t size_noab, size_t size_max_dim_d1_t2, size_t size_max_dim_d1_v2, size_t size_nvab,
+  size_t size_max_dim_d2_t2, size_t size_max_dim_d2_v2, size_t size_max_dim_s1_t1,
+  size_t size_max_dim_s1_v2,
+  //
+  float factor,
+  //
+  float* dev_evl_sorted_h1b, float* dev_evl_sorted_h2b, float* dev_evl_sorted_h3b,
+  float* dev_evl_sorted_p4b, float* dev_evl_sorted_p5b, float* dev_evl_sorted_p6b,
+  float* partial_energies, gpuEvent_t* done_copy);

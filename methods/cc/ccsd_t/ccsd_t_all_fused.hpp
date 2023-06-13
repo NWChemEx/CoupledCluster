@@ -95,7 +95,7 @@ void ccsd_t_fully_fused_none_df_none_task(
   size_t size_T_d2_t2, size_t size_T_d2_v2,
   //
   std::vector<T>& energy_l,
-#if defined(USE_CUDA) || defined(USE_DPCPP)
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
   hostEnergyReduceData_t* reduceData,
 #endif
   LRUCache<Index, std::vector<T>>& cache_s1t, LRUCache<Index, std::vector<T>>& cache_s1v,
@@ -104,8 +104,7 @@ void ccsd_t_fully_fused_none_df_none_task(
   gpuEvent_t* done_compute, gpuEvent_t* done_copy) {
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
   // get (round-robin) GPU stream from pool
-  gpuStream_t& stream = tamm::GPUStreamPool::getInstance().getRRStream();
-  std::cout << "Address of the stream: " << stream << std::endl;
+  gpuStream_t& stream = tamm::GPUStreamPool::getInstance().getStream();
   // get GPU memory handle from pool
   auto& memPool = tamm::GPUPooledStorageManager::getInstance();
 #endif
@@ -142,7 +141,14 @@ void ccsd_t_fully_fused_none_df_none_task(
   T* dev_evl_sorted_p5b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p5b));
   T* dev_evl_sorted_p6b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p6b));
 
-  if(!memPool.gpuEventQuery(*done_copy)) { memPool.gpuEventSynchronize(*done_copy); }
+  //if(!gpuEventQuery(*done_copy)) { gpuEventSynchronize(*done_copy); }
+  #if defined(USE_CUDA)
+  if(!cudaEventQuery(*done_copy)) { cudaEventSynchronize(*done_copy); }
+  #elif defined(USE_HIP)
+  if(!hipEventQuery(*done_copy)) { hipEventSynchronize(*done_copy); }
+  #else
+  if(done_copy->get_info<sycl::info::event::command_execution_status>() != sycl::info::event_command_status::complete) { done_copy->wait(); }
+  #endif
 #endif
 
   // resets
@@ -181,33 +187,40 @@ void ccsd_t_fully_fused_none_df_none_task(
                      cache_d2t, cache_d2v);
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-  if(!memPool.gpuEventQuery(*done_compute)) { memPool.gpuEventSynchronize(*done_compute); }
+  //if(!gpuEventQuery(*done_compute)) { gpuEventSynchronize(*done_compute); }
+  #if defined(USE_CUDA)
+  if(!cudaEventQuery(*done_compute)) { cudaEventSynchronize(*done_compute); }
+  #elif defined(USE_HIP)
+  if(!hipEventQuery(*done_compute)) { hipEventSynchronize(*done_compute); }
+  #else
+  if(done_compute->get_info<sycl::info::event::command_execution_status>() != sycl::info::event_command_status::complete) { done_compute->wait(); }
+  #endif
 
-  memPool.gpuMemcpyAsync(dev_evl_sorted_h1b, host_evl_sorted_h1b, sizeof(T) * base_size_h1b, "H2D",
+  gpuMemcpyAsync<T>(dev_evl_sorted_h1b, host_evl_sorted_h1b, base_size_h1b, gpuMemcpyHostToDevice,
                          stream);
-  memPool.gpuMemcpyAsync(dev_evl_sorted_h2b, host_evl_sorted_h2b, sizeof(T) * base_size_h2b, "H2D",
+  gpuMemcpyAsync<T>(dev_evl_sorted_h2b, host_evl_sorted_h2b, base_size_h2b, gpuMemcpyHostToDevice,
                          stream);
-  memPool.gpuMemcpyAsync(dev_evl_sorted_h3b, host_evl_sorted_h3b, sizeof(T) * base_size_h3b, "H2D",
+  gpuMemcpyAsync<T>(dev_evl_sorted_h3b, host_evl_sorted_h3b, base_size_h3b, gpuMemcpyHostToDevice,
                          stream);
-  memPool.gpuMemcpyAsync(dev_evl_sorted_p4b, host_evl_sorted_p4b, sizeof(T) * base_size_p4b, "H2D",
+  gpuMemcpyAsync<T>(dev_evl_sorted_p4b, host_evl_sorted_p4b, base_size_p4b, gpuMemcpyHostToDevice,
                          stream);
-  memPool.gpuMemcpyAsync(dev_evl_sorted_p5b, host_evl_sorted_p5b, sizeof(T) * base_size_p5b, "H2D",
+  gpuMemcpyAsync<T>(dev_evl_sorted_p5b, host_evl_sorted_p5b, base_size_p5b, gpuMemcpyHostToDevice,
                          stream);
-  memPool.gpuMemcpyAsync(dev_evl_sorted_p6b, host_evl_sorted_p6b, sizeof(T) * base_size_p6b, "H2D",
+  gpuMemcpyAsync<T>(dev_evl_sorted_p6b, host_evl_sorted_p6b, base_size_p6b, gpuMemcpyHostToDevice,
                          stream);
 
-  memPool.gpuMemcpyAsync(df_dev_s1_t1_all, df_host_pinned_s1_t1,
-                         sizeof(T) * max_dim_s1_t1 * df_num_s1_enabled, "H2D", stream);
-  memPool.gpuMemcpyAsync(df_dev_s1_v2_all, df_host_pinned_s1_v2,
-                         sizeof(T) * max_dim_s1_v2 * df_num_s1_enabled, "H2D", stream);
-  memPool.gpuMemcpyAsync(df_dev_d1_t2_all, df_host_pinned_d1_t2,
-                         sizeof(T) * max_dim_d1_t2 * df_num_d1_enabled, "H2D", stream);
-  memPool.gpuMemcpyAsync(df_dev_d1_v2_all, df_host_pinned_d1_v2,
-                         sizeof(T) * max_dim_d1_v2 * df_num_d1_enabled, "H2D", stream);
-  memPool.gpuMemcpyAsync(df_dev_d2_t2_all, df_host_pinned_d2_t2,
-                         sizeof(T) * max_dim_d2_t2 * df_num_d2_enabled, "H2D", stream);
-  memPool.gpuMemcpyAsync(df_dev_d2_v2_all, df_host_pinned_d2_v2,
-                         sizeof(T) * max_dim_d2_v2 * df_num_d2_enabled, "H2D", stream);
+  gpuMemcpyAsync<T>(df_dev_s1_t1_all, df_host_pinned_s1_t1,
+                         max_dim_s1_t1 * df_num_s1_enabled, gpuMemcpyHostToDevice, stream);
+  gpuMemcpyAsync<T>(df_dev_s1_v2_all, df_host_pinned_s1_v2,
+                         max_dim_s1_v2 * df_num_s1_enabled, gpuMemcpyHostToDevice, stream);
+  gpuMemcpyAsync<T>(df_dev_d1_t2_all, df_host_pinned_d1_t2,
+                         max_dim_d1_t2 * df_num_d1_enabled, gpuMemcpyHostToDevice, stream);
+  gpuMemcpyAsync<T>(df_dev_d1_v2_all, df_host_pinned_d1_v2,
+                         max_dim_d1_v2 * df_num_d1_enabled, gpuMemcpyHostToDevice, stream);
+  gpuMemcpyAsync<T>(df_dev_d2_t2_all, df_host_pinned_d2_t2,
+                         max_dim_d2_t2 * df_num_d2_enabled, gpuMemcpyHostToDevice, stream);
+  gpuMemcpyAsync<T>(df_dev_d2_v2_all, df_host_pinned_d2_v2,
+                         max_dim_d2_v2 * df_num_d2_enabled, gpuMemcpyHostToDevice, stream);
 #endif
 
   size_t num_blocks = CEIL(base_size_h3b, 4) * CEIL(base_size_h2b, 4) * CEIL(base_size_h1b, 4) *
@@ -290,34 +303,20 @@ void ccsd_t_fully_fused_none_df_none_task(
 #endif
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-  memPool.gpuMemcpyAsync(host_energies, dev_energies, sizeof(T) * num_blocks * 2, "D2H", stream);
+  gpuMemcpyAsync<T>(host_energies, dev_energies, num_blocks * 2, gpuMemcpyDeviceToHost, stream);
 
-#ifdef USE_CUDA
   reduceData->num_blocks    = num_blocks;
   reduceData->host_energies = host_energies;
   reduceData->result_energy = energy_l.data();
   reduceData->factor        = factor;
 
+#ifdef USE_CUDA
   CUDA_SAFE(cudaLaunchHostFunc(stream, hostEnergyReduce, reduceData));
   CUDA_SAFE(cudaEventRecord(*done_compute, stream));
 #elif defined(USE_HIP)
-  T final_energy_1 = 0.0;
-  T final_energy_2 = 0.0;
-  for(size_t i = 0; i < num_blocks; i++) {
-    final_energy_1 += host_energies[i];
-    final_energy_2 += host_energies[i + num_blocks];
-  }
-
-  energy_l[0] += final_energy_1 * factor;
-  energy_l[1] += final_energy_2 * factor;
-
+  HIP_SAFE(hipLaunchHostFunc(stream, hostEnergyReduce, reduceData));
   HIP_SAFE(hipEventRecord(*done_compute, stream));
 #elif defined(USE_DPCPP)
-  reduceData->num_blocks    = num_blocks;
-  reduceData->host_energies = host_energies;
-  reduceData->result_energy = energy_l.data();
-  reduceData->factor        = factor;
-
   (*done_compute) = stream.submit([&](sycl::handler& cgh) {
     cgh.host_task([=]() {
       hostEnergyReduceData_t* data_t        = (hostEnergyReduceData_t*) reduceData;
