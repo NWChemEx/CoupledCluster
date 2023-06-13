@@ -2,17 +2,8 @@
 
 #include "fused_common.hpp"
 
-#if defined(USE_DPCPP)
-#include "ccsd_t_all_fused_sycl.hpp"
-#elif defined(USE_HIP)
-#include "ccsd_t_all_fused_hip.hpp"
-#endif
-
 void dev_mem_s(size_t, size_t, size_t, size_t, size_t, size_t);
 void dev_mem_d(size_t, size_t, size_t, size_t, size_t, size_t);
-
-#define TEST_NEW_KERNEL
-#define TEST_NEW_THREAD
 
 #define CEIL(a, b) (((a) + (b) -1) / (b))
 
@@ -84,7 +75,7 @@ template<typename T>
 void ccsd_t_fully_fused_none_df_none_task(
   bool is_restricted, const Index noab, const Index nvab, int64_t rank, std::vector<int>& k_spin,
   std::vector<size_t>& k_range, std::vector<size_t>& k_offset, Tensor<T>& d_t1, Tensor<T>& d_t2,
-  Tensor<T>& d_v2, std::vector<T>& k_evl_sorted,
+  V2Tensors<T>& d_v2, std::vector<T>& k_evl_sorted,
   //
   T* df_host_pinned_s1_t1, T* df_host_pinned_s1_v2, T* df_host_pinned_d1_t2,
   T* df_host_pinned_d1_v2, T* df_host_pinned_d2_t2, T* df_host_pinned_d2_v2, T* host_energies,
@@ -222,28 +213,39 @@ void ccsd_t_fully_fused_none_df_none_task(
   size_t num_blocks = CEIL(base_size_h3b, 4) * CEIL(base_size_h2b, 4) * CEIL(base_size_h1b, 4) *
                       CEIL(base_size_p6b, 4) * CEIL(base_size_p5b, 4) * CEIL(base_size_p4b, 4);
 
-#if defined(USE_DPCPP)
-  fully_fused_ccsd_t_gpu(stream, num_blocks, k_range[t_h1b], k_range[t_h2b], k_range[t_h3b],
-                         k_range[t_p4b], k_range[t_p5b], k_range[t_p6b],
-                         //
-                         df_dev_d1_t2_all, df_dev_d1_v2_all, df_dev_d2_t2_all, df_dev_d2_v2_all,
-                         df_dev_s1_t1_all, df_dev_s1_v2_all,
-                         //
-                         //  for constant memory
-                         //
-                         df_simple_d1_size, df_simple_d1_exec, df_simple_d2_size, df_simple_d2_exec,
-                         df_simple_s1_size, df_simple_s1_exec,
-                         //
-                         noab, max_dim_d1_t2, max_dim_d1_v2, nvab, max_dim_d2_t2, max_dim_d2_v2,
-                         max_dim_s1_t1, max_dim_s1_v2,
-                         //
-                         factor,
-                         //
-                         dev_evl_sorted_h1b, dev_evl_sorted_h2b, dev_evl_sorted_h3b,
-                         dev_evl_sorted_p4b, dev_evl_sorted_p5b, dev_evl_sorted_p6b,
-                         //
-                         dev_energies, done_copy);
-#elif defined(USE_HIP) || (defined(USE_CUDA) && !defined(USE_NV_TC))
+#ifdef OPT_KERNEL_TIMING
+  //
+  long double task_num_ops_s1    = 0;
+  long double task_num_ops_d1    = 0;
+  long double task_num_ops_d2    = 0;
+  long double task_num_ops_total = 0;
+
+  //
+  helper_calculate_num_ops(noab, nvab, df_simple_s1_size, df_simple_d1_size, df_simple_d2_size,
+                           df_simple_s1_exec, df_simple_d1_exec, df_simple_d2_exec, task_num_ops_s1,
+                           task_num_ops_d1, task_num_ops_d2, total_num_ops_s1, total_num_ops_d1,
+                           total_num_ops_d2);
+
+  //
+  task_num_ops_total = task_num_ops_s1 + task_num_ops_d1 + task_num_ops_d2;
+#endif
+
+#ifdef OPT_KERNEL_TIMING
+  gpuEvent_t start_kernel_only, stop_kernel_only;
+
+#if defined(USE_CUDA)
+  CUDA_SAFE(cudaEventCreate(&start_kernel_only));
+  CUDA_SAFE(cudaEventCreate(&stop_kernel_only));
+  CUDA_SAFE(cudaEventRecord(start_kernel_only));
+#elif defined(USE_HIP)
+  HIP_SAFE(hipEventCreate(&start_kernel_only));
+  HIP_SAFE(hipEventCreate(&stop_kernel_only));
+  HIP_SAFE(hipEventRecord(start_kernel_only));
+#endif
+
+#endif // OPT_KERNEL_TIMING
+
+#if defined(USE_DPCPP) || defined(USE_HIP) || (defined(USE_CUDA) && !defined(USE_NV_TC))
   fully_fused_ccsd_t_gpu(stream, num_blocks, k_range[t_h1b], k_range[t_h2b], k_range[t_h3b],
                          k_range[t_p4b], k_range[t_p5b], k_range[t_p6b],
                          //

@@ -2,8 +2,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "XL"
     OR CMAKE_CXX_COMPILER_ID STREQUAL "Cray"
     OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
     OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel" 
-    OR CMAKE_CXX_COMPILER_ID STREQUAL "PGI")
-    # OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    OR CMAKE_CXX_COMPILER_ID STREQUAL "PGI"
+    OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
         message(FATAL_ERROR "TAMM cannot be currently built with ${CMAKE_CXX_COMPILER_ID} compilers.")
 endif()
 
@@ -49,8 +49,8 @@ endif()
 check_compiler_version(C Clang 9)
 check_compiler_version(CXX Clang 9)
 
-check_compiler_version(C AppleClang 13)
-check_compiler_version(CXX AppleClang 13)
+# check_compiler_version(C AppleClang 14)
+# check_compiler_version(CXX AppleClang 14)
 
 check_compiler_version(C GNU 9.1)
 check_compiler_version(CXX GNU 9.1)
@@ -105,10 +105,7 @@ if(USE_CUDA)
         message(FATAL_ERROR "CUDA Toolkit not found.")
     endif()
 
-    set(_CUDA_MIN "11.0")
-    # if(GPU_ARCH LESS 80)
-    #     set(_CUDA_MIN "10.1")
-    # endif()
+    set(_CUDA_MIN "11.4")
     if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS ${_CUDA_MIN})
         message(FATAL_ERROR "CUDA version provided \
         (${CMAKE_CUDA_COMPILER_VERSION}) \

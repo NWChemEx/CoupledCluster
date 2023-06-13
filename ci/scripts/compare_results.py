@@ -17,8 +17,8 @@ ref_res_path = os.path.abspath(str(sys.argv[1]))
 cur_res_path = os.path.abspath(str(sys.argv[2]))
 file_compare = False
 
-wmsg = False
-if len(sys.argv) == 4: wmsg = True
+upcxx = False
+if len(sys.argv) == 4: upcxx = True
 
 #check if above paths exist
 if not os.path.exists(ref_res_path): 
@@ -43,18 +43,24 @@ else:
     ref_files = os.listdir(ref_res_path)
     cur_files = os.listdir(cur_res_path)
 
+ref_notreq = ["ubiquitin_dgrtl.sto-3g.ccsd.json","uracil.cc-pvdz.ccsd_t.json"]
+for rf in ref_notreq:
+    if rf not in cur_files:
+        ref_files.remove(rf)
 
 def check_results(ref_energy,cur_energy,ccsd_threshold,en_str):
     if (not isclose(ref_energy, cur_energy, ccsd_threshold)):
-        errmsg = "ERROR: mismatch in " + en_str + "\nreference: " \
+        errmsg = " ... ERROR: mismatch in " + en_str + "\nreference: " \
         + str(ref_energy) + ", current: " + str(cur_energy)
         print(errmsg)
         return False
     return True
 
+missing_tests=[]
 for ref_file in ref_files:
     if ref_file not in cur_files and not file_compare:
-        if wmsg: print("WARNING: " + ref_file + " not available in " + cur_res_path)
+        print("WARNING: " + ref_file + " not available in " + cur_res_path)
+        missing_tests.append(ref_file)
         #sys.exit(1)
         continue
     
@@ -71,6 +77,8 @@ for ref_file in ref_files:
     ref_scf_energy = ref_data["output"]["SCF"]["final_energy"]
     cur_scf_energy = cur_data["output"]["SCF"]["final_energy"]
 
+    print(str(ref_file) + ": ", end='')
+
     if not isclose(ref_scf_energy, cur_scf_energy, scf_threshold*10):
         print("ERROR: SCF energy does not match. reference: " + str(ref_scf_energy) + ", current: " + str(cur_scf_energy))
         sys.exit(1)
@@ -84,7 +92,7 @@ for ref_file in ref_files:
         if not rcheck: sys.exit(1)
 
     if "DLPNO-CCSD" in ref_data["output"]:
-        print("Checking DLPNO-CCSD results")
+        print("Checking DLPNO-CCSD results", end='')
         ref_dlpno_ccsd_energy = ref_data["output"]["DLPNO-CCSD"]["final_energy"]["correlation"]
         cur_dlpno_ccsd_energy = cur_data["output"]["DLPNO-CCSD"]["final_energy"]["correlation"]
         rcheck = check_results(ref_dlpno_ccsd_energy,cur_dlpno_ccsd_energy,ccsd_threshold,"DLPNO-CCSD correlation energy")
@@ -92,7 +100,7 @@ for ref_file in ref_files:
 
 
     if "CCSD(T)" in ref_data["output"]:
-        print("Checking CCSD(T) results")
+        print("Checking CCSD(T) results", end='')
         ref_pt_data = ref_data["output"]["CCSD(T)"]
         cur_pt_data = cur_data["output"]["CCSD(T)"]
         
@@ -124,4 +132,12 @@ for ref_file in ref_files:
 
         if not rcheck: sys.exit(1)
 
+    print(" ... OK")
 
+if not missing_tests:
+    print(" **** ALL TESTS PASS ****")
+else: 
+    missing_tests = [os.path.splitext(x)[0] for x in missing_tests]
+    print(" ************ The following tests failed ************** ")
+    print("\n".join(missing_tests))
+    sys.exit(1)

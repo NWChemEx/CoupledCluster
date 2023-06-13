@@ -27,17 +27,6 @@ int checkCudaKernelCompatible(bool r0) {
   }
   // printf ("[%s] dP.major: %d, dP.minor: %d\n", __func__, dP.major, dP.minor);
 
-#if 0
-  // Returns the latest version of CUDA supported by the driver.
-  int driverVersion = 0;
-  cudaError_t cuda_driverVersion = cudaDriverGetVersion(&driverVersion);
-  if (cuda_driverVersion != cudaSuccess) {
-    cudaError_t error = cudaGetLastError();
-    if(r0) printf ("CUDA error: %s", cudaGetErrorString(error));
-    return cuda_driverVersion;
-  }
-#endif
-
   // the version is returned as (1000 major + 10 minior)
   cudaError_t cuda_driver = cudaRuntimeGetVersion(&version);
   if(cuda_driver != cudaSuccess) {
@@ -62,8 +51,8 @@ int checkCudaKernelCompatible(bool r0) {
 template<typename T>
 std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
   SystemData& sys_data, ExecutionContext& ec, std::vector<int>& k_spin, const TiledIndexSpace& MO,
-  Tensor<T>& d_t1, Tensor<T>& d_t2, Tensor<T>& d_v2, std::vector<T>& k_evl_sorted, T hf_ccsd_energy,
-  int nDevices, bool is_restricted, LRUCache<Index, std::vector<T>>& cache_s1t,
+  Tensor<T>& d_t1, Tensor<T>& d_t2, V2Tensors<T>& d_v2, std::vector<T>& k_evl_sorted,
+  T hf_ccsd_energy, bool is_restricted, LRUCache<Index, std::vector<T>>& cache_s1t,
   LRUCache<Index, std::vector<T>>& cache_s1v, LRUCache<Index, std::vector<T>>& cache_d1t,
   LRUCache<Index, std::vector<T>>& cache_d1v, LRUCache<Index, std::vector<T>>& cache_d2t,
   LRUCache<Index, std::vector<T>>& cache_d2v, bool seq_h3b = false, bool tilesize_opt = true) {
@@ -103,8 +92,6 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
     // cout << "k_spin = " << k_spin << endl;
     // cout << "k_range = " << k_range << endl;
     cout << "MO Tiles = " << mo_tiles << endl;
-
-    cout << "Using " << nDevices << " gpu devices per node" << endl << endl;
   }
 
   // TODO replicate d_t1 L84-89 ccsd_t_gpu.F
@@ -471,7 +458,7 @@ template<typename T>
 void ccsd_t_fused_driver_calculator_ops(SystemData& sys_data, ExecutionContext& ec,
                                         std::vector<int>& k_spin, const TiledIndexSpace& MO,
                                         std::vector<T>& k_evl_sorted, double hf_ccsd_energy,
-                                        int nDevices, bool is_restricted,
+                                        bool is_restricted,
                                         long double& total_num_ops,
                                         //
                                         bool seq_h3b = false) {

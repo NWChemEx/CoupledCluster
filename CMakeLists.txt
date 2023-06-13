@@ -15,11 +15,18 @@ if( NOT ${CMakeBuild_FOUND} )
     endif()
   endif()
 
-  FetchContent_Declare(
-    CMakeBuild
-    GIT_REPOSITORY https://github.com/NWChemEx-Project/CMakeBuild.git
-    GIT_TAG ${CMSB_TAG}
-  )
+  if(ENABLE_OFFLINE_BUILD)
+    FetchContent_Declare(
+      CMakeBuild
+      URL ${DEPS_LOCAL_PATH}/CMakeBuild
+    )
+  else()
+    FetchContent_Declare(
+      CMakeBuild
+      GIT_REPOSITORY https://github.com/NWChemEx-Project/CMakeBuild.git
+      GIT_TAG ${CMSB_TAG}
+    )
+  endif()
 
   FetchContent_MakeAvailable( CMakeBuild )
   set(CMSB_MACROS ${CMakeBuild_SOURCE_DIR}/cmake/macros)
@@ -33,7 +40,7 @@ set(CMSB_PROJECTS CoupledCluster)
 set(CoupledCluster_DEPENDENCIES TAMM)
 
 set(BUILD_TESTS OFF)
-set(BUILD_LIBINT ON)
+set(MODULES "CC")
 
 set(CoupledCluster_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/CoupledCluster)
 set(CoupledCluster_METHODS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/methods/)
