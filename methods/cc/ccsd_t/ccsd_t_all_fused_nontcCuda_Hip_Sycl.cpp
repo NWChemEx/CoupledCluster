@@ -2871,7 +2871,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
   sycl::range<2> blocksize(FUSION_SIZE_TB_1_Y, FUSION_SIZE_TB_1_X);
   auto           global_range = gridsize * blocksize;
 
-  stream_id.parallel_for<class ccsd_t_syclkernel>(
+  stream_id.parallel_for(
     sycl::nd_range<2>(global_range, blocksize), [=](auto item) {
       revised_jk_ccsd_t_fully_fused_kernel(
         size_noab, size_nvab, size_max_dim_s1_t1, size_max_dim_s1_v2, size_max_dim_d1_t2,
