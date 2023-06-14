@@ -143,9 +143,9 @@ void ccsd_t_fully_fused_none_df_none_task(
 
   //if(!gpuEventQuery(*done_copy)) { gpuEventSynchronize(*done_copy); }
   #if defined(USE_CUDA)
-  if(!cudaEventQuery(*done_copy)) { cudaEventSynchronize(*done_copy); }
+  if(cudaEventQuery(*done_copy)!=cudaSuccess) { cudaEventSynchronize(*done_copy); }
   #elif defined(USE_HIP)
-  if(!hipEventQuery(*done_copy)) { hipEventSynchronize(*done_copy); }
+  if(hipEventQuery(*done_copy)!=hipSuccess) { hipEventSynchronize(*done_copy); }
   #else
   if(done_copy->get_info<sycl::info::event::command_execution_status>() != sycl::info::event_command_status::complete) { done_copy->wait(); }
   #endif
@@ -189,9 +189,9 @@ void ccsd_t_fully_fused_none_df_none_task(
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
   //if(!gpuEventQuery(*done_compute)) { gpuEventSynchronize(*done_compute); }
   #if defined(USE_CUDA)
-  if(!cudaEventQuery(*done_compute)) { cudaEventSynchronize(*done_compute); }
+  if(cudaEventQuery(*done_compute)!=cudaSuccess) { cudaEventSynchronize(*done_compute); }
   #elif defined(USE_HIP)
-  if(!hipEventQuery(*done_compute)) { hipEventSynchronize(*done_compute); }
+  if(hipEventQuery(*done_compute)!=hipSuccess) { hipEventSynchronize(*done_compute); }
   #else
   if(done_compute->get_info<sycl::info::event::command_execution_status>() != sycl::info::event_command_status::complete) { done_compute->wait(); }
   #endif
