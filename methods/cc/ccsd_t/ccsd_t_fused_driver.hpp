@@ -458,8 +458,7 @@ template<typename T>
 void ccsd_t_fused_driver_calculator_ops(SystemData& sys_data, ExecutionContext& ec,
                                         std::vector<int>& k_spin, const TiledIndexSpace& MO,
                                         std::vector<T>& k_evl_sorted, double hf_ccsd_energy,
-                                        bool is_restricted,
-                                        long double& total_num_ops,
+                                        bool is_restricted, long double& total_num_ops,
                                         //
                                         bool seq_h3b = false) {
   //
