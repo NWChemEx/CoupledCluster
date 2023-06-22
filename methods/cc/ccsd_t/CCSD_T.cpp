@@ -51,6 +51,9 @@ void ccsd_t_driver() {
   CCSDOptions& ccsd_options   = sys_data.options_map.ccsd_options;
   const int    ccsdt_tilesize = ccsd_options.ccsdt_tilesize;
 
+  sys_data.n_frozen_core    = sys_data.options_map.ccsd_options.freeze_core;
+  sys_data.n_frozen_virtual = sys_data.options_map.ccsd_options.freeze_virtual;
+
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
   std::string t_errmsg = check_memory_req(ccsdt_tilesize, sys_data.nbf);
   if(!t_errmsg.empty()) tamm_terminate(t_errmsg);
@@ -286,8 +289,11 @@ void ccsd_t_driver() {
     ec.flush_and_sync();
   }
   else { // skip ccsd
+    update_sysdata(sys_data, MO);
+    N    = MO("all");
     d_f1 = {{N, N}, {1, 1}};
     Tensor<T>::allocate(&ec, d_f1);
+    if(rank == 0) sys_data.print();
   }
 
   auto [MO1, total_orbitals1] = setupMOIS(sys_data, true);

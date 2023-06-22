@@ -340,19 +340,40 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     auto gauxc_lb = std::make_shared<GauXC::LoadBalancer>(ec.pg().comm(), gauxc_mol, gauxc_molgrid,
                                                           gauxc_basis, gauxc_molmeta);
 
-    std::string xc_string = scf_options.xc_type;
+    std::vector<std::string>       xc_vector = scf_options.xc_type;
+    std::vector<ExchCXX::XCKernel> kernels   = {};
+    std::vector<double>            params(2049, 0.0);
+    int                            kernel_id = -1;
+
     // TODO: Refactor DFT code path when we eventually enable GauXC by default.
     // is_ks=false, so we setup, but do not run DFT.
-    if(xc_string.empty()) xc_string = "pbe0";
-    std::transform(xc_string.begin(), xc_string.end(), xc_string.begin(), ::toupper);
-    GauXC::functional_type      gauxc_func(ExchCXX::Backend::builtin,
-                                           ExchCXX::functional_map.value(xc_string),
-                                           ExchCXX::Spin::Unpolarized);
+    if(xc_vector.empty()) xc_vector = {"PBE0"};
+    for(std::string& xcfunc: xc_vector) {
+      std::transform(xcfunc.begin(), xcfunc.end(), xcfunc.begin(), ::toupper);
+      if(rank == 0) cout << "Functional: " << xcfunc << endl;
+
+      try {
+        // Try to setup using the builtin backend.
+        kernels.push_back(ExchCXX::XCKernel(ExchCXX::Backend::builtin,
+                                            ExchCXX::kernel_map.value(xcfunc),
+                                            ExchCXX::Spin::Unpolarized));
+      } catch(...) {
+        // If the above failed, setup with LibXC backend
+        kernels.push_back(
+          ExchCXX::XCKernel(ExchCXX::libxc_name_string(xcfunc), ExchCXX::Spin::Unpolarized));
+        if(strequal_case(xcfunc, "HYB_GGA_X_QED") || strequal_case(xcfunc, "HYB_GGA_XC_QED") ||
+           strequal_case(xcfunc, "HYB_MGGA_XC_QED") || strequal_case(xcfunc, "HYB_MGGA_X_QED"))
+          kernel_id = kernels.size() - 1;
+      }
+    }
+
+    // Initialize GauXC integrator
+    GauXC::functional_type      gauxc_func = GauXC::functional_type(kernels);
     GauXC::XCIntegrator<Matrix> gauxc_integrator(GauXC::ExecutionSpace::Host, ec.pg().comm(),
                                                  gauxc_func, gauxc_basis, gauxc_lb);
 
     // TODO
-    const double xHF = is_ks ? gauxc_func.hyb_exx() : 1.;
+    const double xHF = is_ks ? (gauxc_func.is_hyb() ? gauxc_func.hyb_exx() : 0.) : 1.;
     if(rank == 0) cout << "HF exch = " << xHF << endl;
 #else
   const double xHF = 1.;
