@@ -179,8 +179,8 @@ inline void write_json_data(SystemData& sys_data, const std::string cmodule) {
 
   if(cmodule == "CCSD") {
     // CCSD options
-    results["input"][cmodule]["tilesize"]  = ccsd.tilesize;
-    results["input"][cmodule]["itilesize"] = ccsd.itilesize;
+    results["input"][cmodule]["tilesize"]      = ccsd.tilesize;
+    results["input"][cmodule]["itilesize"]     = ccsd.itilesize;
     results["input"][cmodule]["ndiis"]         = ccsd.ndiis;
     results["input"][cmodule]["readt"]         = str_bool(ccsd.readt);
     results["input"][cmodule]["writet"]        = str_bool(ccsd.writet);
