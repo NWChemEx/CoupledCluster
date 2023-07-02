@@ -1379,7 +1379,7 @@ inline GauXC::BasisSet<double> make_gauxc_basis(const libint2::BasisSet& basis) 
       GauXC::PrimSize(shell.alpha.size()), GauXC::AngularMomentum(shell.contr[0].l),
       GauXC::SphericalType(shell.contr[0].pure), prim_array, coeff_array, origin, false);
   }
-  gauxc_basis.generate_shell_to_ao();
+  // gauxc_basis.generate_shell_to_ao();
   return gauxc_basis;
 }
 

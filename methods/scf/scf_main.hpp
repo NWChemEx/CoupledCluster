@@ -29,6 +29,12 @@
 // #include "scf_iter.hpp"
 #include "scf_taskmap.hpp"
 
+#if defined(USE_GAUXC)
+#include <gauxc/molecular_weights.hpp>
+#include <gauxc/molgrid/defaults.hpp>
+#include <gauxc/xc_integrator/integrator_factory.hpp>
+#endif
+
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -332,13 +338,27 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     /*** =========================== ***/
     /*** Setup GauXC types           ***/
     /*** =========================== ***/
-    auto gauxc_mol   = gauxc_util::make_gauxc_molecule(atoms);
-    auto gauxc_basis = gauxc_util::make_gauxc_basis(shells);
+    size_t batch_size  = 512;
+    auto   gauxc_mol   = gauxc_util::make_gauxc_molecule(atoms);
+    auto   gauxc_basis = gauxc_util::make_gauxc_basis(shells);
+    auto   gauxc_rt    = GauXC::RuntimeEnvironment(ec.pg().comm());
 
-    GauXC::MolGrid gauxc_molgrid(GauXC::AtomicGridSizeDefault::UltraFineGrid, gauxc_mol);
-    auto           gauxc_molmeta = std::make_shared<GauXC::MolMeta>(gauxc_mol);
-    auto gauxc_lb = std::make_shared<GauXC::LoadBalancer>(ec.pg().comm(), gauxc_mol, gauxc_molgrid,
-                                                          gauxc_basis, gauxc_molmeta);
+    // This options are set to get good accuracy.
+    // TODO: Modify these from the input [Unpruned, Robust, Treutler]
+    auto gauxc_molgrid = GauXC::MolGridFactory::create_default_molgrid(
+      gauxc_mol, GauXC::PruningScheme::Treutler, GauXC::BatchSize(batch_size),
+      GauXC::RadialQuad::MuraKnowles, GauXC::AtomicGridSizeDefault::UltraFineGrid);
+    auto gauxc_molmeta = std::make_shared<GauXC::MolMeta>(gauxc_mol);
+
+    // Set the load balancer
+    GauXC::LoadBalancerFactory lb_factory(GauXC::ExecutionSpace::Host, "Replicated");
+    auto gauxc_lb = lb_factory.get_shared_instance(gauxc_rt, gauxc_mol, gauxc_molgrid, gauxc_basis);
+
+    // TODO: Modify the weighting algorithm from the input [Becke, SSF, LKO]
+    GauXC::MolecularWeightsSettings mw_settings = {GauXC::XCWeightAlg::SSF, false};
+    GauXC::MolecularWeightsFactory  mw_factory(GauXC::ExecutionSpace::Host, "Default", mw_settings);
+    auto                            mw = mw_factory.get_instance();
+    mw.modify_weights(*gauxc_lb);
 
     std::vector<std::string>       xc_vector = scf_options.xc_type;
     std::vector<ExchCXX::XCKernel> kernels   = {};
@@ -367,10 +387,12 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       }
     }
 
+    GauXC::functional_type gauxc_func = GauXC::functional_type(kernels);
+
     // Initialize GauXC integrator
-    GauXC::functional_type      gauxc_func = GauXC::functional_type(kernels);
-    GauXC::XCIntegrator<Matrix> gauxc_integrator(GauXC::ExecutionSpace::Host, ec.pg().comm(),
-                                                 gauxc_func, gauxc_basis, gauxc_lb);
+    GauXC::XCIntegratorFactory<Matrix> integrator_factory(GauXC::ExecutionSpace::Host, "Replicated",
+                                                          "Default", "Default", "Default");
+    auto gauxc_integrator = integrator_factory.get_instance(gauxc_func, gauxc_lb);
 
     // TODO
     const double xHF = is_ks ? (gauxc_func.is_hyb() ? gauxc_func.hyb_exx() : 0.) : 1.;
