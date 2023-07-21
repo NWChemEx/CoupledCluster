@@ -848,7 +848,7 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
 
     std::vector<TensorType> sbuf(dsize);
 #ifdef USE_UPCXX
-    g_chol_tamm.get_raw_contig(lo, hi, sbuf.data());
+    g_chol_tamm.get_raw(lo, hi, sbuf.data());
 #else
     int64_t ld[2] = {cd_ncast<size_t>(block_dims[1]), cd_ncast<size_t>(block_dims[2])};
     NGA_Get64(g_chol, &lo[1], &hi[1], sbuf.data(), ld);
