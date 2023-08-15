@@ -102,7 +102,7 @@ public:
     moldenfile       = "";
     n_lindep         = 0;
     scf_type         = "restricted";
-    xc_type          = ""; // pbe0
+    xc_type          = {}; // pbe0
     alpha            = 1.0;
     nnodes           = 1;
     writem           = diis_hist;
@@ -139,7 +139,7 @@ public:
   int         writem;
   double      alpha; // density mixing parameter
   std::string scf_type;
-  std::string xc_type;
+  std::vector<std::string> xc_type;
   // mos_txt: write lcao, mo transformed core H, fock, and v2 to disk as text files.
   bool                    mos_txt{false};
   bool                    mulliken_analysis{false};
@@ -166,7 +166,11 @@ public:
     }
 
     cout << " scf_type     = " << scf_type << endl;
-    if(!xc_type.empty()) { cout << " xc_type      = " << xc_type << endl; }
+    if(!xc_type.empty()) {
+      cout << " xc_type      = [ ";
+      for(auto xcfunc: xc_type) { cout << " \"" << xcfunc << "\","; }
+      cout << "\b ]" << endl;
+    }
 
     if(scalapack_np_row > 0 && scalapack_np_col > 0) {
       cout << " scalapack_np_row = " << scalapack_np_row << endl;
@@ -181,7 +185,7 @@ public:
     // cout << " ediis_off    = " << ediis_off   << endl;
     // print_bool(" sad         ", sad);
     if(mulliken_analysis || mos_txt || mo_vectors_analysis.first) {
-      cout << " print_analysis {" << endl;
+      cout << " PRINT {" << endl;
       if(mos_txt) cout << std::boolalpha << "  mos_txt             = " << mos_txt << endl;
       if(mulliken_analysis)
         cout << std::boolalpha << "  mulliken_analysis   = " << mulliken_analysis << endl;
@@ -704,7 +708,7 @@ parse_json(json& jinput) {
   parse_option<bool>  (scf_options.debug           , jscf, "debug");
   parse_option<string>(scf_options.moldenfile      , jscf, "moldenfile");
   parse_option<string>(scf_options.scf_type        , jscf, "scf_type");
-  parse_option<string>(scf_options.xc_type         , jscf, "xc_type");
+  parse_option<std::vector<string>>(scf_options.xc_type, jscf, "xc_type");
   parse_option<int>   (scf_options.n_lindep        , jscf, "n_lindep");
   parse_option<int>   (scf_options.restart_size    , jscf, "restart_size");
   parse_option<int>   (scf_options.scalapack_nb    , jscf, "scalapack_nb");
@@ -712,7 +716,7 @@ parse_json(json& jinput) {
   parse_option<int>   (scf_options.scalapack_np_col, jscf, "scalapack_np_col");
   parse_option<string>(scf_options.ext_data_path   , jscf, "ext_data_path");
 
-  json jscf_analysis = jscf["print_analysis"];
+  json jscf_analysis = jscf["PRINT"];
   parse_option<bool> (scf_options.mos_txt          , jscf_analysis, "mos_txt");
   parse_option<bool> (scf_options.mulliken_analysis, jscf_analysis, "mulliken");
   parse_option<std::pair<bool, double>>(scf_options.mo_vectors_analysis, jscf_analysis, "mo_vectors");
@@ -726,7 +730,7 @@ parse_json(json& jinput) {
     "tol_lindep", "conve", "convd", "diis_hist","force_tilesize","tilesize","df_tilesize",
     "alpha","writem","nnodes","restart","noscf","ediis","ediis_off","sad","moldenfile",
     "debug","scf_type","xc_type","n_lindep","restart_size","scalapack_nb","riscf",
-    "scalapack_np_row","scalapack_np_col","ext_data_path","print_analysis","comments"};
+    "scalapack_np_row","scalapack_np_col","ext_data_path","PRINT","comments"};
   // clang-format on
 
   for(auto& el: jscf.items()) {
@@ -779,7 +783,7 @@ parse_json(json& jinput) {
     "CCSD(T)",     "DLPNO",     "EOMCCSD",        "RT-EOMCC",      "GFCCSD",
     "comments",    "threshold", "force_tilesize", "tilesize",      "itilesize",
     "lshift",      "ndiis",     "ccsd_maxiter",   "freeze_core",   "freeze_virtual",
-    "print",       "readt",     "writet",         "writev",        "writet_iter",
+    "PRINT",       "readt",     "writet",         "writev",        "writet_iter",
     "debug",       "nactive",   "profile_ccsd",   "balance_tiles", "ext_data_path",
     "computeTData"};
   for(auto& el: jcc.items()) {
@@ -807,7 +811,7 @@ parse_json(json& jinput) {
   parse_option<string>(ccsd_options.ext_data_path , jcc, "ext_data_path");
   parse_option<bool>  (ccsd_options.computeTData  , jcc, "computeTData");
 
-  json jcc_print = jcc["print"];
+  json jcc_print = jcc["PRINT"];
   parse_option<bool> (ccsd_options.ccsd_diagnostics, jcc_print, "ccsd_diagnostics");
   parse_option<std::pair<bool, double>>(ccsd_options.tamplitudes, jcc_print, "tamplitudes");
 

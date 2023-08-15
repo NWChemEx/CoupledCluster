@@ -29,6 +29,12 @@
 // #include "scf_iter.hpp"
 #include "scf_taskmap.hpp"
 
+#if defined(USE_GAUXC)
+#include <gauxc/molecular_weights.hpp>
+#include <gauxc/molgrid/defaults.hpp>
+#include <gauxc/xc_integrator/integrator_factory.hpp>
+#endif
+
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -332,27 +338,64 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     /*** =========================== ***/
     /*** Setup GauXC types           ***/
     /*** =========================== ***/
-    auto gauxc_mol   = gauxc_util::make_gauxc_molecule(atoms);
-    auto gauxc_basis = gauxc_util::make_gauxc_basis(shells);
+    size_t batch_size  = 512;
+    auto   gauxc_mol   = gauxc_util::make_gauxc_molecule(atoms);
+    auto   gauxc_basis = gauxc_util::make_gauxc_basis(shells);
+    auto   gauxc_rt    = GauXC::RuntimeEnvironment(ec.pg().comm());
 
-    GauXC::MolGrid gauxc_molgrid(GauXC::AtomicGridSizeDefault::UltraFineGrid, gauxc_mol);
-    auto           gauxc_molmeta = std::make_shared<GauXC::MolMeta>(gauxc_mol);
-    auto gauxc_lb = std::make_shared<GauXC::LoadBalancer>(ec.pg().comm(), gauxc_mol, gauxc_molgrid,
-                                                          gauxc_basis, gauxc_molmeta);
+    // This options are set to get good accuracy.
+    // TODO: Modify these from the input [Unpruned, Robust, Treutler]
+    auto gauxc_molgrid = GauXC::MolGridFactory::create_default_molgrid(
+      gauxc_mol, GauXC::PruningScheme::Treutler, GauXC::BatchSize(batch_size),
+      GauXC::RadialQuad::MuraKnowles, GauXC::AtomicGridSizeDefault::UltraFineGrid);
+    auto gauxc_molmeta = std::make_shared<GauXC::MolMeta>(gauxc_mol);
 
-    std::string xc_string = scf_options.xc_type;
+    // Set the load balancer
+    GauXC::LoadBalancerFactory lb_factory(GauXC::ExecutionSpace::Host, "Replicated");
+    auto gauxc_lb = lb_factory.get_shared_instance(gauxc_rt, gauxc_mol, gauxc_molgrid, gauxc_basis);
+
+    // TODO: Modify the weighting algorithm from the input [Becke, SSF, LKO]
+    GauXC::MolecularWeightsSettings mw_settings = {GauXC::XCWeightAlg::SSF, false};
+    GauXC::MolecularWeightsFactory  mw_factory(GauXC::ExecutionSpace::Host, "Default", mw_settings);
+    auto                            mw = mw_factory.get_instance();
+    mw.modify_weights(*gauxc_lb);
+
+    std::vector<std::string>       xc_vector = scf_options.xc_type;
+    std::vector<ExchCXX::XCKernel> kernels   = {};
+    std::vector<double>            params(2049, 0.0);
+    int                            kernel_id = -1;
+
     // TODO: Refactor DFT code path when we eventually enable GauXC by default.
     // is_ks=false, so we setup, but do not run DFT.
-    if(xc_string.empty()) xc_string = "pbe0";
-    std::transform(xc_string.begin(), xc_string.end(), xc_string.begin(), ::toupper);
-    GauXC::functional_type      gauxc_func(ExchCXX::Backend::builtin,
-                                           ExchCXX::functional_map.value(xc_string),
-                                           ExchCXX::Spin::Unpolarized);
-    GauXC::XCIntegrator<Matrix> gauxc_integrator(GauXC::ExecutionSpace::Host, ec.pg().comm(),
-                                                 gauxc_func, gauxc_basis, gauxc_lb);
+    if(xc_vector.empty()) xc_vector = {"PBE0"};
+    for(std::string& xcfunc: xc_vector) {
+      std::transform(xcfunc.begin(), xcfunc.end(), xcfunc.begin(), ::toupper);
+      if(rank == 0) cout << "Functional: " << xcfunc << endl;
+
+      try {
+        // Try to setup using the builtin backend.
+        kernels.push_back(ExchCXX::XCKernel(ExchCXX::Backend::builtin,
+                                            ExchCXX::kernel_map.value(xcfunc),
+                                            ExchCXX::Spin::Unpolarized));
+      } catch(...) {
+        // If the above failed, setup with LibXC backend
+        kernels.push_back(
+          ExchCXX::XCKernel(ExchCXX::libxc_name_string(xcfunc), ExchCXX::Spin::Unpolarized));
+        if(strequal_case(xcfunc, "HYB_GGA_X_QED") || strequal_case(xcfunc, "HYB_GGA_XC_QED") ||
+           strequal_case(xcfunc, "HYB_MGGA_XC_QED") || strequal_case(xcfunc, "HYB_MGGA_X_QED"))
+          kernel_id = kernels.size() - 1;
+      }
+    }
+
+    GauXC::functional_type gauxc_func = GauXC::functional_type(kernels);
+
+    // Initialize GauXC integrator
+    GauXC::XCIntegratorFactory<Matrix> integrator_factory(GauXC::ExecutionSpace::Host, "Replicated",
+                                                          "Default", "Default", "Default");
+    auto gauxc_integrator = integrator_factory.get_instance(gauxc_func, gauxc_lb);
 
     // TODO
-    const double xHF = is_ks ? gauxc_func.hyb_exx() : 1.;
+    const double xHF = is_ks ? (gauxc_func.is_hyb() ? gauxc_func.hyb_exx() : 0.) : 1.;
     if(rank == 0) cout << "HF exch = " << xHF << endl;
 #else
   const double xHF = 1.;

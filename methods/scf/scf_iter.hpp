@@ -1114,11 +1114,15 @@ void diis(ExecutionContext& ec, const TiledIndexSpace& tAO, Tensor<TensorType> D
 
       maxe = std::distance(max_err.begin(), std::max_element(max_err.begin(), max_err.end()));
     }
+    Tensor<TensorType>::deallocate(diis_hist[maxe]);
+    Tensor<TensorType>::deallocate(fock_hist[maxe]);
     diis_hist.erase(diis_hist.begin() + maxe);
     fock_hist.erase(fock_hist.begin() + maxe);
   }
   else {
     if(ndiis == (int) (max_hist / 2) && n_lindep > 1) {
+      for(auto x: diis_hist) Tensor<TensorType>::deallocate(x);
+      for(auto x: fock_hist) Tensor<TensorType>::deallocate(x);
       diis_hist.clear();
       fock_hist.clear();
     }
@@ -1194,6 +1198,8 @@ void diis(ExecutionContext& ec, const TiledIndexSpace& tAO, Tensor<TensorType> D
         cout
           << "<DIIS> Singularity in Pulay matrix detected." /*Error and Fock matrices removed." */
           << endl;
+      Tensor<TensorType>::deallocate(diis_hist[0]);
+      Tensor<TensorType>::deallocate(fock_hist[0]);
       diis_hist.erase(diis_hist.begin());
       fock_hist.erase(fock_hist.begin());
       idim--;

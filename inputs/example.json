@@ -58,7 +58,7 @@
         "scalapack_np_col": 0,
         "n_lindep": 0,
         "moldenfile": "",
-        "print_analysis": {
+        "PRINT": {
           "mos_txt" : false,
           "mulliken": false,
           "mo_vectors" : [false,0.15]
@@ -94,7 +94,7 @@
 
         "ext_data_path": "",
 
-        "print": {
+        "PRINT": {
           "tamplitudes": [false,0.05],
           "ccsd_diagnostics" : false
         },
