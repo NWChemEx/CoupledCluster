@@ -395,7 +395,11 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
 #if defined(USE_CUDA)
   CUDA_SAFE(cudaDeviceSynchronize());
 #elif defined(USE_HIP)
-HIP_SAFE(hipDeviceSynchronize());
+  HIP_SAFE(hipDeviceSynchronize());
+#elif defined(USE_DPCPP)
+  // SYCL wasn't waiting for the device to finish (!)
+  gpuStream_t& stream = tamm::GPUStreamPool::getInstance().getStream();
+  stream.wait();
 #endif
   //
   energy1 = energy_l[0];
