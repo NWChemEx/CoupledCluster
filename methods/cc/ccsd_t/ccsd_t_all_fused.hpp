@@ -301,9 +301,9 @@ void ccsd_t_fully_fused_none_df_none_task(
   HIP_SAFE(hipEventRecord(*done_compute, stream));
 #elif defined(USE_DPCPP)
   // TODO: the sync might not be needed (stream.first.ext_oneapi_submit_barrier)
-  auto host_task_event = stream.first.submit(
+  auto host_task_event = stream.submit(
     [&](sycl::handler& cgh) { cgh.host_task([=]() { hostEnergyReduce(reduceData); }); });
-  (*done_compute) = stream.first.ext_oneapi_submit_barrier({host_task_event});
+  (*done_compute) = stream.ext_oneapi_submit_barrier({host_task_event});
 #endif
 
   //  free device mem back to pool
