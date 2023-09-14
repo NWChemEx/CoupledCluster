@@ -9,25 +9,22 @@ void dev_mem_d(size_t, size_t, size_t, size_t, size_t, size_t);
 
 void hostEnergyReduce(void* data) {
   hostEnergyReduceData_t* data_t        = (hostEnergyReduceData_t*) data;
-  const size_t            num_blocks    = data_t->num_blocks;
   double*                 host_energies = data_t->host_energies;
-  double*                 res           = data_t->result_energy;
-  double                  factor        = data_t->factor;
 
   double final_energy_1 = 0.0;
   double final_energy_2 = 0.0;
-  for(size_t i = 0; i < num_blocks; i++) {
+  for(size_t i = 0; i < data_t->num_blocks; i++) {
     final_energy_1 += host_energies[i];
-    final_energy_2 += host_energies[i + num_blocks];
+    final_energy_2 += host_energies[i + data_t->num_blocks];
   }
 
-  res[0] += final_energy_1 * factor;
-  res[1] += final_energy_2 * factor;
+  data_t->result_energy[0] += final_energy_1 * data_t->factor;
+  data_t->result_energy[1] += final_energy_2 * data_t->factor;
 }
 
 // driver for the fully-fused kernel (FP64)
 template<typename T>
-void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t base_size_h1b,
+void fully_fused_ccsd_t_gpu(gpuStream_t& stream, size_t num_blocks, size_t base_size_h1b,
                             size_t base_size_h2b, size_t base_size_h3b, size_t base_size_p4b,
                             size_t base_size_p5b, size_t base_size_p6b,
                             //
@@ -50,7 +47,7 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream_id, size_t num_blocks, size_t ba
 #if defined(USE_CUDA) && defined(USE_NV_TC)
 // driver for fully-fused kernel for 3rd gen. tensor core (FP64)
 template<typename T>
-void ccsd_t_fully_fused_nvidia_tc_fp64(gpuStream_t& stream_id, size_t numBlks, size_t size_h3,
+void ccsd_t_fully_fused_nvidia_tc_fp64(gpuStream_t& stream, size_t numBlks, size_t size_h3,
                                        size_t size_h2, size_t size_h1, size_t size_p6,
                                        size_t size_p5, size_t size_p4,
                                        //
@@ -141,17 +138,7 @@ void ccsd_t_fully_fused_none_df_none_task(
   T* dev_evl_sorted_p5b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p5b));
   T* dev_evl_sorted_p6b = static_cast<T*>(memPool.allocate(sizeof(T) * base_size_p6b));
 
-// if(!gpuEventQuery(*done_copy)) { gpuEventSynchronize(*done_copy); }
-#if defined(USE_CUDA)
-  if(cudaEventQuery(*done_copy) != cudaSuccess) { cudaEventSynchronize(*done_copy); }
-#elif defined(USE_HIP)
-  if(hipEventQuery(*done_copy) != hipSuccess) { hipEventSynchronize(*done_copy); }
-#else
-  if(done_copy->get_info<sycl::info::event::command_execution_status>() !=
-     sycl::info::event_command_status::complete) {
-    done_copy->wait();
-  }
-#endif
+  if(!gpuEventQuery(*done_copy)) { gpuEventSynchronize(*done_copy); }
 #endif
 
   // resets
@@ -190,17 +177,7 @@ void ccsd_t_fully_fused_none_df_none_task(
                      cache_d2t, cache_d2v);
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-// if(!gpuEventQuery(*done_compute)) { gpuEventSynchronize(*done_compute); }
-#if defined(USE_CUDA)
-  if(cudaEventQuery(*done_compute) != cudaSuccess) { cudaEventSynchronize(*done_compute); }
-#elif defined(USE_HIP)
-  if(hipEventQuery(*done_compute) != hipSuccess) { hipEventSynchronize(*done_compute); }
-#else
-  if(done_compute->get_info<sycl::info::event::command_execution_status>() !=
-     sycl::info::event_command_status::complete) {
-    done_compute->wait();
-  }
-#endif
+  if(!gpuEventQuery(*done_compute)) { gpuEventSynchronize(*done_compute); }
 
   gpuMemcpyAsync<T>(dev_evl_sorted_h1b, host_evl_sorted_h1b, base_size_h1b, gpuMemcpyHostToDevice,
                     stream);
@@ -323,25 +300,10 @@ void ccsd_t_fully_fused_none_df_none_task(
   HIP_SAFE(hipLaunchHostFunc(stream, hostEnergyReduce, reduceData));
   HIP_SAFE(hipEventRecord(*done_compute, stream));
 #elif defined(USE_DPCPP)
-  (*done_compute) = stream.submit([&](sycl::handler& cgh) {
-    cgh.host_task([=]() {
-      hostEnergyReduceData_t* data_t        = (hostEnergyReduceData_t*) reduceData;
-      const size_t            num_blocks    = data_t->num_blocks;
-      double*                 host_energies = data_t->host_energies;
-      double*                 res           = data_t->result_energy;
-      double                  factor        = data_t->factor;
-
-      double final_energy_1 = 0.0;
-      double final_energy_2 = 0.0;
-      for(size_t i = 0; i < num_blocks; i++) {
-        final_energy_1 += host_energies[i];
-        final_energy_2 += host_energies[i + num_blocks];
-      }
-
-      res[0] += final_energy_1 * factor;
-      res[1] += final_energy_2 * factor;
-    });
-  });
+  // TODO: the sync might not be needed (stream.first.ext_oneapi_submit_barrier)
+  auto host_task_event = stream.first.submit([&](sycl::handler& cgh) {
+      cgh.host_task([=]() { hostEnergyReduce(reduceData); }); });
+  (*done_compute) = stream.first.ext_oneapi_submit_barrier({host_task_event});
 #endif
 
   //  free device mem back to pool
