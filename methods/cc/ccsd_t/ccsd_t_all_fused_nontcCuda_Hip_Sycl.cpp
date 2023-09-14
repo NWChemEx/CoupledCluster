@@ -2828,17 +2828,13 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream, size_t num_blocks, size_t base_
   HIP_SAFE(hipMemcpyToSymbolAsync(HIP_SYMBOL(const_df_s1_exec), host_s1_exec, sizeof(int) * (9), 0,
                                   hipMemcpyHostToDevice, stream));
   HIP_SAFE(hipMemcpyToSymbolAsync(HIP_SYMBOL(const_df_d1_size), host_d1_size,
-                                  sizeof(int) * (7 * size_noab), 0, hipMemcpyHostToDevice,
-                                  stream));
+                                  sizeof(int) * (7 * size_noab), 0, hipMemcpyHostToDevice, stream));
   HIP_SAFE(hipMemcpyToSymbolAsync(HIP_SYMBOL(const_df_d1_exec), host_d1_exec,
-                                  sizeof(int) * (9 * size_noab), 0, hipMemcpyHostToDevice,
-                                  stream));
+                                  sizeof(int) * (9 * size_noab), 0, hipMemcpyHostToDevice, stream));
   HIP_SAFE(hipMemcpyToSymbolAsync(HIP_SYMBOL(const_df_d2_size), host_d2_size,
-                                  sizeof(int) * (7 * size_nvab), 0, hipMemcpyHostToDevice,
-                                  stream));
+                                  sizeof(int) * (7 * size_nvab), 0, hipMemcpyHostToDevice, stream));
   HIP_SAFE(hipMemcpyToSymbolAsync(HIP_SYMBOL(const_df_d2_exec), host_d2_exec,
-                                  sizeof(int) * (9 * size_nvab), 0, hipMemcpyHostToDevice,
-                                  stream));
+                                  sizeof(int) * (9 * size_nvab), 0, hipMemcpyHostToDevice, stream));
 
   HIP_SAFE(hipEventRecord(*done_copy, stream));
 
@@ -2849,12 +2845,12 @@ void fully_fused_ccsd_t_gpu(gpuStream_t& stream, size_t num_blocks, size_t base_
   //    to call the fused kernel for singles, doubles and energies.
   hipLaunchKernelGGL(
     HIP_KERNEL_NAME(revised_jk_ccsd_t_fully_fused_kernel<T>), dim3(gridsize_1), dim3(blocksize_1),
-    0, stream, (int) size_noab, (int) size_nvab, (int) size_max_dim_s1_t1,
-    (int) size_max_dim_s1_v2, (int) size_max_dim_d1_t2, (int) size_max_dim_d1_v2,
-    (int) size_max_dim_d2_t2, (int) size_max_dim_d2_v2, df_dev_d1_t2_all, df_dev_d1_v2_all,
-    df_dev_d2_t2_all, df_dev_d2_v2_all, df_dev_s1_t1_all, df_dev_s1_v2_all, dev_evl_sorted_h1b,
-    dev_evl_sorted_h2b, dev_evl_sorted_h3b, dev_evl_sorted_p4b, dev_evl_sorted_p5b,
-    dev_evl_sorted_p6b, partial_energies, CEIL(base_size_h3b, FUSION_SIZE_SLICE_1_H3),
+    0, stream, (int) size_noab, (int) size_nvab, (int) size_max_dim_s1_t1, (int) size_max_dim_s1_v2,
+    (int) size_max_dim_d1_t2, (int) size_max_dim_d1_v2, (int) size_max_dim_d2_t2,
+    (int) size_max_dim_d2_v2, df_dev_d1_t2_all, df_dev_d1_v2_all, df_dev_d2_t2_all,
+    df_dev_d2_v2_all, df_dev_s1_t1_all, df_dev_s1_v2_all, dev_evl_sorted_h1b, dev_evl_sorted_h2b,
+    dev_evl_sorted_h3b, dev_evl_sorted_p4b, dev_evl_sorted_p5b, dev_evl_sorted_p6b,
+    partial_energies, CEIL(base_size_h3b, FUSION_SIZE_SLICE_1_H3),
     CEIL(base_size_h2b, FUSION_SIZE_SLICE_1_H2), CEIL(base_size_h1b, FUSION_SIZE_SLICE_1_H1),
     CEIL(base_size_p6b, FUSION_SIZE_SLICE_1_P6), CEIL(base_size_p5b, FUSION_SIZE_SLICE_1_P5),
     CEIL(base_size_p4b, FUSION_SIZE_SLICE_1_P4), (int) base_size_h1b, (int) base_size_h2b,
