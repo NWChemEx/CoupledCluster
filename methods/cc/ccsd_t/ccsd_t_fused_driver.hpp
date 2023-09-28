@@ -392,10 +392,8 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
     }
   } // end seq h3b
 
-#if defined(USE_CUDA)
-  CUDA_SAFE(cudaDeviceSynchronize());
-#elif defined(USE_HIP)
-HIP_SAFE(hipDeviceSynchronize());
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+  gpuDeviceSynchronize();
 #endif
   //
   energy1 = energy_l[0];
