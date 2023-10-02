@@ -2759,7 +2759,7 @@ __global__ void revised_jk_ccsd_t_fully_fused_kernel(
   int sgsize = sg.get_local_range()[0];
   for(int offset = sgsize/2; offset > 0; offset /= 2) {
     energy_1 += sycl::shift_group_left(sg, energy_1, offset);
-    energy_2 += sycl::shift_group_left((sg, energy_2, offset);
+    energy_2 += sycl::shift_group_left(sg, energy_2, offset);
   }
   if(threadIdx_x == 0 && threadIdx_y % 2 == 0) {
     sm_a[0][threadIdx_y / 2] = energy_1;
