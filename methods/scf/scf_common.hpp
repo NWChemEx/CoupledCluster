@@ -422,8 +422,6 @@ void t2e_hf_helper(const ExecutionContext& ec, tamm::Tensor<T>& ttensor, Matrix&
                    const std::string& ustr = "") {
   const string pstr = "(" + ustr + ")";
 
-  // auto hf_t1 = std::chrono::high_resolution_clock::now();
-
   const auto rank = ec.pg().rank();
   const auto N    = etensor.rows(); // TODO
 
@@ -437,14 +435,6 @@ void t2e_hf_helper(const ExecutionContext& ec, tamm::Tensor<T>& ttensor, Matrix&
   etensor = Eigen::Map<Matrix>(Hbuf, N, N);
   Hbufv.clear();
   Hbufv.shrink_to_fit();
-
-  // auto hf_t2 = std::chrono::high_resolution_clock::now();
-  // auto hf_time =
-  //   std::chrono::duration_cast<std::chrono::duration<double>>((hf_t2 - hf_t1)).count();
-
-  // //ec.pg().barrier(); //TODO
-  // if(rank == 0) std::cout << std::endl << "Time for tamm to eigen " << pstr << " : " << hf_time
-  // << " secs" << endl;
 }
 
 inline void compute_shellpair_list(const ExecutionContext& ec, const libint2::BasisSet& shells,
@@ -554,23 +544,6 @@ inline void compute_orthogonalizer(ExecutionContext& ec, SystemData& sys_data, S
 
   std::tie(obs_rank, S_condition_number, XtX_condition_number) = gensqrtinv(
     ec, sys_data, scf_vars, scalapack_info, ttensors, false, S_condition_number_threshold);
-  // auto obs_nbf_omitted = (long)(sys_data.nbf_orig) - (long)obs_rank;
-  // std::cout << "overlap condition number = " << S_condition_number;
-  // if (obs_nbf_omitted > 0){
-  //   if(ec.pg().rank()==0) std::cout << " (dropped " << obs_nbf_omitted << " "
-  //             << (obs_nbf_omitted > 1 ? "fns" : "fn") << " to reduce to "
-  //             << XtX_condition_number << ")";
-  // }
-  // if(ec.pg().rank()==0) std::cout << endl;
-
-  // FIXME: UNCOMMENT?
-  // if (obs_nbf_omitted > 0) {
-  //   Matrix should_be_I = X.transpose() * S * X;
-  //   Matrix I = Matrix::Identity(should_be_I.rows(), should_be_I.cols());
-  //   if(ec.pg().rank()==0) std::cout << std::endl << "||X^t * S * X - I||_2 = " << (should_be_I -
-  //   I).norm()
-  //             << " (should be 0)" << endl;
-  // }
 
   // TODO: Redeclare TAMM S1 with new dims?
   auto hf_t2   = std::chrono::high_resolution_clock::now();

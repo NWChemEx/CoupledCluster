@@ -263,28 +263,6 @@ scf_iter_body(ExecutionContext& ec, ScalapackInfo& scalapack_info, const int& it
   ec.pg().broadcast(D_alpha.data(), D_alpha.size(), 0);
   if(is_uhf) ec.pg().broadcast(D_beta.data(), D_beta.size(), 0);
 
-  // if(ediis) {
-  //   compute_2bf<TensorType>(ec, sys_data, scf_vars, obs, do_schwarz_screen, shell2bf, SchwarzK,
-  //                           max_nprim4,shells, ttensors, etensors, false, do_density_fitting);
-  //   Tensor<TensorType>  Dcopy{tAO,tAO};
-  //   Tensor<TensorType>  Fcopy{tAO, tAO};
-  //   Tensor<TensorType>  ehf_tamm_copy{};
-  //   Tensor<TensorType>::allocate(&ec,Dcopy,Fcopy,ehf_tamm_copy);
-  //   sch
-  //     (Dcopy() = D_alpha_tamm())
-  //     (Fcopy() = F_alpha_tmp())
-  //     (ehf_tmp(mu,nu) = F_alpha_tmp(mu,nu))
-  //     (ehf_tamm_copy()     = 0.5 * D_alpha_tamm() * ehf_tmp())
-  //     // (ehf_tamm_copy() = ehf_tamm())
-  //     .execute();
-  //   ttensors.D_hist.push_back(Dcopy);
-  //   ttensors.fock_hist.push_back(Fcopy);
-  //   ttensors.ehf_tamm_hist.push_back(ehf_tamm_copy);
-  //   if(rank==0) cout << "iter: " << iter << "," << (int)ttensors.D_hist.size() << endl;
-  //   energy_diis(ec, tAO, iter, max_hist, D_alpha_tamm,
-  //               ttensors.D_hist, ttensors.fock_hist, ttensors.ehf_tamm_hist);
-  // }
-
   double rmsd = 0.0;
   // clang-format off
   sch
@@ -435,13 +413,7 @@ void compute_2bf(ExecutionContext& ec, ScalapackInfo& scalapack_info, const Syst
   auto   do_t1        = std::chrono::high_resolution_clock::now();
   Matrix D_shblk_norm = compute_shellblock_norm(obs, D); // matrix of infty-norms of shell blocks
 
-  // TODO: Revisit
   double engine_precision = fock_precision;
-
-  if(rank == 0)
-    assert(engine_precision > max_engine_precision &&
-           "using precomputed shell pair data limits the max engine precision"
-           " ... make max_engine_precision smaller and recompile");
 
   // construct the 2-electron repulsion integrals engine pool
   using libint2::Engine;
@@ -950,148 +922,6 @@ void compute_2bf(ExecutionContext& ec, ScalapackInfo& scalapack_info, const Syst
       std::cout << "3c contractions: " << std::fixed << std::setprecision(2) << tigtime << "s, ";
 
   } // end density fitting
-}
-
-template<typename TensorType>
-void energy_diis(ExecutionContext& ec, const TiledIndexSpace& tAO, int iter, int max_hist,
-                 Tensor<TensorType> D, Tensor<TensorType> F, Tensor<TensorType> ehf_tamm,
-                 std::vector<Tensor<TensorType>>& D_hist,
-                 std::vector<Tensor<TensorType>>& fock_hist,
-                 std::vector<Tensor<TensorType>>& ehf_tamm_hist) {
-  tamm::Scheduler sch{ec};
-
-  auto rank = ec.pg().rank().value();
-
-  // if(rank == 0) cout << "contructing pulay matrix" << endl;
-
-  int64_t idim = std::min((int) D_hist.size(), max_hist);
-  if(idim < 2) return;
-
-  int64_t             info = -1;
-  int64_t             N    = idim + 1;
-  std::vector<double> X(N, 0.);
-
-  Tensor<TensorType> dhi_trace{};
-  auto [mu, nu] = tAO.labels<2>("all");
-  Tensor<TensorType>::allocate(&ec, dhi_trace);
-
-  // ----- Construct Pulay matrix -----
-  Matrix             A = Matrix::Zero(idim + 1, idim + 1);
-  Tensor<TensorType> dFij{tAO, tAO};
-  Tensor<TensorType> dDij{tAO, tAO};
-  Tensor<TensorType>::allocate(&ec, dFij, dDij);
-
-  for(int i = 0; i < idim; i++) {
-    for(int j = i + 1; j < idim; j++) {
-      // clang-format off
-      sch
-        (dFij()       = fock_hist[i]())
-        (dFij()      -= fock_hist[j]())
-        (dDij()       = D_hist[i]())
-        (dDij()      -= D_hist[j]())
-        (dhi_trace()  = dFij(nu,mu) * dDij(mu,nu))
-        .execute();
-      // clang-format on
-      double dhi      = get_scalar(dhi_trace);
-      A(i + 1, j + 1) = dhi;
-    }
-  }
-  Tensor<TensorType>::deallocate(dFij, dDij);
-
-  for(int i = 1; i <= idim; i++) {
-    for(int j = i + 1; j <= idim; j++) { A(j, i) = A(i, j); }
-  }
-
-  for(int i = 1; i <= idim; i++) {
-    A(i, 0) = -1.0;
-    A(0, i) = -1.0;
-  }
-
-  // if(rank == 0) cout << std::setprecision(8) << "in ediis, A: " << endl << A << endl;
-
-  while(info != 0) {
-    N = idim + 1;
-    std::vector<double> AC(N * (N + 1) / 2);
-    std::vector<double> AF(AC.size());
-    std::vector<double> B(N, 0.);
-    B.front() = -1.0;
-    // if(rank == 0) cout << std::setprecision(8) << "in ediis, B ini: " << endl << B << endl;
-    for(int i = 1; i < N; i++) {
-      double dhi = get_scalar(ehf_tamm_hist[i - 1]);
-      // if(rank==0) cout << "i,N,dhi: " << i << "," << N << "," << dhi << endl;
-      B[i] = dhi;
-    }
-    X.resize(N);
-
-    if(rank == 0) cout << std::setprecision(8) << "in ediis, B: " << endl << B << endl;
-
-    int ac_i = 0;
-    for(int i = 0; i <= idim; i++) {
-      for(int j = i; j <= idim; j++) {
-        AC[ac_i] = A(j, i);
-        ac_i++;
-      }
-    }
-
-    TensorType           RCOND;
-    std::vector<int64_t> IPIV(N);
-    std::vector<double>  BERR(1), FERR(1); // NRHS
-
-    info = lapack::spsvx(lapack::Factored::NotFactored, lapack::Uplo::Lower, N, 1, AC.data(),
-                         AF.data(), IPIV.data(), B.data(), N, X.data(), N, &RCOND, FERR.data(),
-                         BERR.data());
-
-    if(info != 0) {
-      // if(rank==0) cout << "<E-DIIS> Singularity in Pulay matrix. Density and Fock difference
-      // matrices removed." << endl;
-      fock_hist.erase(fock_hist.begin());
-      D_hist.erase(D_hist.begin());
-      idim--;
-      if(idim == 1) return;
-      Matrix A_pl  = A.block(2, 2, idim, idim);
-      Matrix A_new = Matrix::Zero(idim + 1, idim + 1);
-
-      for(int i = 1; i <= idim; i++) {
-        A_new(i, 0) = -1.0;
-        A_new(0, i) = -1.0;
-      }
-      A_new.block(1, 1, idim, idim) = A_pl;
-      A                             = A_new;
-    }
-
-  } // while
-
-  Tensor<TensorType>::deallocate(dhi_trace);
-
-  // if(rank == 0) cout << std::setprecision(8) << "in ediis, X: " << endl << X << endl;
-
-  std::vector<double> X_final(N);
-  // Reordering [0...N] -> [1...N,0] to match eigen's lu solve
-  X_final.back() = X.front();
-  std::copy(X.begin() + 1, X.end(), X_final.begin());
-
-  if(rank == 0)
-    cout << std::setprecision(8) << "in ediis, X_reordered: " << endl << X_final << endl;
-
-  // clang-format off
-  sch
-    (D() = 0)
-    (F() = 0)
-    (ehf_tamm() = 0)
-    .execute();
-  // clang-format on
-
-  for(int j = 0; j < idim; j++) {
-    // clang-format off
-    sch
-      (D() += X_final[j] * D_hist[j]())
-      (F() += X_final[j] * fock_hist[j]())
-      (ehf_tamm() += X_final[j] * ehf_tamm_hist[j]());
-    // clang-format on
-  }
-  sch.execute();
-
-  // if(rank == 0) cout << "end of ediis" << endl;
 }
 
 template<typename TensorType>

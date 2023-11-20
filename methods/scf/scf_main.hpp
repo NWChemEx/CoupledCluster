@@ -260,20 +260,6 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
     else scf_vars.dfbs.set_pure(false); // use cartesian gaussians
 
     if(rank == 0) cout << "density-fitting basis set rank = " << scf_vars.dfbs.nbf() << endl;
-// compute DFBS non-negligible shell-pair list
-#if 0
-      {
-        //TODO: Doesn't work to screen - revisit
-        std::tie(scf_vars.dfbs_shellpair_list, scf_vars.dfbs_shellpair_data) = compute_shellpairs(scf_vars.dfbs);
-        size_t nsp = 0;
-        for (auto& sp : scf_vars.dfbs_shellpair_list) {
-          nsp += sp.second.size();
-        }
-        if(rank==0) std::cout << "# of {all,non-negligible} DFBS shell-pairs = {"
-                  << scf_vars.dfbs.size() * (scf_vars.dfbs.size() + 1) / 2 << "," << nsp << "}"
-                  << endl;
-      }
-#endif
 
     sys_data.ndf  = scf_vars.dfbs.nbf();
     scf_vars.dfAO = IndexSpace{range(0, sys_data.ndf)};
@@ -600,87 +586,50 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       ec.pg().barrier();
     }
     else {
-// TODO: WIP
-#if 0
-        if(sad) {
-          if(rank==0) cout << "SAD enabled" << endl;
+      auto [s1vec, s2vec, ntask_vec] = compute_initial_guess_taskinfo<TensorType>(
+        ec, sys_data, scf_vars, atoms, shells, basis, is_spherical, etensors, ttensors, charge,
+        multiplicity);
 
-          compute_sad_guess<TensorType>(ec, sys_data, atoms, shells, basis, 
-                                       is_spherical, etensors, charge, multiplicity); 
-          compute_2bf<TensorType>(ec, sys_data, scf_vars, obs, do_schwarz_screen, shell2bf, SchwarzK,
-                                         max_nprim4,shells, ttensors, etensors, false, do_density_fitting);
-          sch
-            (ttensors.F_alpha()  = ttensors.H1())
-            (ttensors.F_alpha() += ttensors.F_alpha_tmp())
-            .execute();
-          Matrix Fa_eig = tamm_to_eigen_matrix(ttensors.F_alpha);
-          Matrix X_eig  = tamm_to_eigen_matrix(ttensors.X_alpha);
-          Eigen::SelfAdjointEigenSolver<Matrix> eig_solver_guess_a(X_eig.transpose() * Fa_eig * X_eig);
-          auto C_alpha = X_eig * eig_solver_guess_a.eigenvectors();
-          auto C_occ_a = C_alpha.leftCols(sys_data.nelectrons_alpha);
-          if(is_rhf) 
-            etensors.D = 2.0 * C_occ_a * C_occ_a.transpose();
-          if(is_uhf) {
-            etensors.D = C_occ_a * C_occ_a.transpose();
-            sch
-              (ttensors.F_beta()  = ttensors.H1())
-              (ttensors.F_beta() += ttensors.F_beta_tmp())
-              .execute();
-            Matrix Fb_eig = tamm_to_eigen_matrix(ttensors.F_beta);
-            Eigen::SelfAdjointEigenSolver<Matrix> eig_solver_guess_b(X_eig.transpose() * Fb_eig * X_eig);
-            auto C_beta  = X_eig * eig_solver_guess_b.eigenvectors();
-            auto C_occ_b = C_beta.leftCols(sys_data.nelectrons_beta);
-            etensors.D_beta = C_occ_b * C_occ_b.transpose();
+      auto [s1_all, s2_all, ntasks_all] =
+        gather_task_vectors<TensorType>(ec, s1vec, s2vec, ntask_vec);
+
+      int tmdim = 0;
+      if(rank == 0) {
+        Loads dummyLoads;
+        /***generate load balanced task map***/
+        readLoads(s1_all, s2_all, ntasks_all, dummyLoads);
+        simpleLoadBal(dummyLoads, ec.pg().size().value());
+        tmdim = std::max(dummyLoads.maxS1, dummyLoads.maxS2);
+        etensors.taskmap.resize(tmdim + 1, tmdim + 1);
+        for(int i = 0; i < tmdim + 1; i++) {
+          for(int j = 0; j < tmdim + 1; j++) {
+            // value in this array is the rank that executes task i,j
+            // -1 indicates a task i,j that can be skipped
+            etensors.taskmap(i, j) = -1;
           }
         }
-        else
-#endif
-      {
-        auto [s1vec, s2vec, ntask_vec] = compute_initial_guess_taskinfo<TensorType>(
-          ec, sys_data, scf_vars, atoms, shells, basis, is_spherical, etensors, ttensors, charge,
-          multiplicity);
+        createTaskMap(etensors.taskmap, dummyLoads);
+      }
 
-        auto [s1_all, s2_all, ntasks_all] =
-          gather_task_vectors<TensorType>(ec, s1vec, s2vec, ntask_vec);
+      ec.pg().broadcast(&tmdim, 0);
+      if(rank != 0) etensors.taskmap.resize(tmdim + 1, tmdim + 1);
+      ec.pg().broadcast(etensors.taskmap.data(), etensors.taskmap.size(), 0);
 
-        int tmdim = 0;
-        if(rank == 0) {
-          Loads dummyLoads;
-          /***generate load balanced task map***/
-          readLoads(s1_all, s2_all, ntasks_all, dummyLoads);
-          simpleLoadBal(dummyLoads, ec.pg().size().value());
-          tmdim = std::max(dummyLoads.maxS1, dummyLoads.maxS2);
-          etensors.taskmap.resize(tmdim + 1, tmdim + 1);
-          for(int i = 0; i < tmdim + 1; i++) {
-            for(int j = 0; j < tmdim + 1; j++) {
-              // value in this array is the rank that executes task i,j
-              // -1 indicates a task i,j that can be skipped
-              etensors.taskmap(i, j) = -1;
-            }
-          }
-          createTaskMap(etensors.taskmap, dummyLoads);
+      compute_initial_guess<TensorType>(ec, scalapack_info, sys_data, scf_vars, atoms, shells,
+                                        basis, is_spherical, etensors, ttensors, charge,
+                                        multiplicity);
+
+      etensors.taskmap.resize(0, 0);
+      if(rank == 0) {
+        write_scf_mat<TensorType>(etensors.C, movecsfile_alpha);
+        write_scf_mat<TensorType>(etensors.D, densityfile_alpha);
+        if(is_uhf) {
+          write_scf_mat<TensorType>(etensors.C_beta, movecsfile_beta);
+          write_scf_mat<TensorType>(etensors.D_beta, densityfile_beta);
         }
-
-        ec.pg().broadcast(&tmdim, 0);
-        if(rank != 0) etensors.taskmap.resize(tmdim + 1, tmdim + 1);
-        ec.pg().broadcast(etensors.taskmap.data(), etensors.taskmap.size(), 0);
-
-        compute_initial_guess<TensorType>(ec, scalapack_info, sys_data, scf_vars, atoms, shells,
-                                          basis, is_spherical, etensors, ttensors, charge,
-                                          multiplicity);
-
-        etensors.taskmap.resize(0, 0);
-        if(rank == 0) {
-          write_scf_mat<TensorType>(etensors.C, movecsfile_alpha);
-          write_scf_mat<TensorType>(etensors.D, densityfile_alpha);
-          if(is_uhf) {
-            write_scf_mat<TensorType>(etensors.C_beta, movecsfile_beta);
-            write_scf_mat<TensorType>(etensors.D_beta, densityfile_beta);
-          }
-        }
-        ec.pg().barrier();
-      } // initial guess
-    }
+      }
+      ec.pg().barrier();
+    } // initial guess
 
     hf_t2   = std::chrono::high_resolution_clock::now();
     hf_time = std::chrono::duration_cast<std::chrono::duration<double>>((hf_t2 - hf_t1)).count();
@@ -839,36 +788,6 @@ hartree_fock(ExecutionContext& exc, const string filename, OptionsMap options_ma
       compute_2bf<TensorType>(ec, scalapack_info, sys_data, scf_vars, obs, do_schwarz_screen,
                               shell2bf, SchwarzK, max_nprim4, shells, ttensors, etensors,
                               is_3c_init, do_density_fitting, xHF);
-
-      // E_Diis
-      if(ediis) {
-        Tensor<TensorType> Dcopy{tAO, tAO};
-        Tensor<TensorType> Fcopy{tAO, tAO};
-        Tensor<TensorType> ehf_tamm_copy{};
-        Tensor<TensorType>::allocate(&ec, Dcopy, Fcopy, ehf_tamm_copy);
-        // clang-format off
-        sch (Dcopy()  = ttensors.D_tamm())
-            (Fcopy()  = ttensors.F_alpha_tmp())
-            (Fcopy() += ttensors.H1())
-            (ehf_tamm_copy()  = 0.5 * Dcopy() * Fcopy())
-            (ehf_tamm_copy() += 0.5 * Dcopy() * ttensors.H1())
-            .execute();
-        // clang-format on
-
-        auto H_nrm = norm(ttensors.H1);
-        auto F_nrm = norm(Fcopy);
-        auto D_nrm = norm(Dcopy);
-        if(rank == 0 && debug)
-          cout << "<ediis> norm of H,F,D: " << H_nrm << "," << F_nrm << "," << D_nrm << ","
-               << get_scalar(ehf_tamm_copy) << endl;
-        ttensors.D_hist.push_back(Dcopy);
-        ttensors.fock_hist.push_back(Fcopy);
-        ttensors.ehf_tamm_hist.push_back(ehf_tamm_copy);
-        // if(rank==0) cout << "iter: " << iter << "," << (int)ttensors.D_hist.size() << "," <<
-        // get_scalar(ehf_tamm_copy) << endl;
-        energy_diis(ec, tAO, iter, max_hist, ttensors.D_tamm, ttensors.F_alpha, ttensors.ehf_tamm,
-                    ttensors.D_hist, ttensors.fock_hist, ttensors.ehf_tamm_hist);
-      }
 
       std::tie(ehf, rmsd) = scf_iter_body<TensorType>(ec, scalapack_info, iter, sys_data, scf_vars,
                                                       ttensors, etensors, ediis,
