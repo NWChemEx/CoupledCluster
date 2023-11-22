@@ -48,18 +48,18 @@ inline libint2::BasisSet ccsd_make_basis(const simde::type::ao_basis_set& bs) {
     std::array<double, 3> origin = {0.0, 0.0, 0.0};
 
     /// Convert centers and their shells to libint equivalents.
-    for(auto center_i = 0; center_i < bs.size(); ++center_i) {
+    for(auto abs_i = 0; abs_i < bs.size(); ++abs_i) {
         /// Add current center to atoms list
-        auto& center = bs[center_i];
-        centers.push_back(
-          atom_ctor(center_i, center.x(), center.y(), center.z()));
+        const auto& abs = bs[abs_i];
+        centers.push_back(atom_ctor(abs_i, abs.center().x(), abs.center().y(),
+                                    abs.center().z()));
 
         /// Gather shells for this center and add them to element_bases
         atom_bases_t atom_bases{};
-        for(const auto&& shelli : center) {
-            const auto nprims = shelli.n_unique_primitives();
-            const auto prim0  = shelli.unique_primitive(0);
-            const auto primN  = shelli.unique_primitive(nprims - 1);
+        for(const auto&& shelli : abs) {
+            const auto nprims = shelli.n_primitives();
+            const auto prim0  = shelli.primitive(0);
+            const auto primN  = shelli.primitive(nprims - 1);
             const bool pure   = shelli.pure() == chemist::ShellType::pure;
             const int l       = shelli.l();
 
@@ -173,10 +173,10 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   auto& f_mod = submods.at("Fock Builder");
 
   const auto& f_hat       = bra.basis_set().fock_operator();
-  const auto& [f_wrapper] = f_mod.run_as<f_pt>(bra_aos, f_hat, bra_aos);
+  const auto& f_wrapper   = f_mod.run_as<f_pt>(bra_aos, f_hat, bra_aos);
 
-  auto&                        ee_mod = submods.at("Electronic Energy");
-  auto [scf_energy]                   = ee_mod.run_as<ee_pt>(bra, H_e, ket);
+  auto& ee_mod     = submods.at("Electronic Energy");
+  auto  scf_energy = ee_mod.run_as<ee_pt>(bra, H_e, ket);
 
   const auto& C_occ  = i.C();
   const auto& C_virt = a.C();
@@ -187,7 +187,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
 
   auto              nwx_shells     = bra.basis_set().occupied_orbitals().from_space().basis_set();
   auto              nbf            = nwx_shells.n_aos();
-  const std::string basis_set_name = nwx_shells[0].basis_set_name();
+  auto              basis_set_name = nwx_shells[0].basis_set_name();
 
   libint2::BasisSet li_shells = ccsd_make_basis(nwx_shells);
 
@@ -225,7 +225,8 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   // TODO: get
   sys_data.input_molecule     = "h2o";
   sys_data.output_file_prefix = sys_data.input_molecule;
-  sys_data.basis = sys_data.options_map.ccsd_options.basis = basis_set_name;
+  sys_data.basis = basis_set_name.value();
+  sys_data.options_map.ccsd_options.basis = sys_data.basis;
   sys_data.scf_energy                                      = scf_energy;
 
   sys_data.update();
@@ -418,8 +419,11 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
     free_vec_tensors(d_r1s, d_r2s, d_t1s, d_t2s);
   }
 
-     if(is_rhf) free_tensors(d_t1, d_t2);
-    ec.flush_and_sync();
+  if(is_rhf) free_tensors(d_t1, d_t2);
+  ec.flush_and_sync();
+
+
+  #if 0
 
     // else { //skip ccsd
     //     d_f1 = {{N,N},{1,1}};
@@ -462,24 +466,39 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
     }
 
 
-    if(rank==0) {
-        std::cout << std::string(70, '-') << std::endl;
-        std::cout << "Total CPU memory required for (T) calculation = " << std::setprecision(5) << ccsd_t_mem << " GiB" << std::endl;
-        std::cout << std::string(70, '-') << std::endl;
+    if(rank == 0) {
+      std::cout << std::string(70, '-') << std::fixed << std::setprecision(2) << std::endl;
+      std::cout << "Total CPU memory required for (T) calculation = " << total_ccsd_t_mem << " GiB"
+                << std::endl;
+      std::cout << " -- memory required for the input tensors: " << ccsd_t_mem << " GiB"
+                << std::endl;
+      std::cout << " -- memory required for intermediate buffers: " << total_extra_buf_mem << " GiB"
+                << std::endl;
+      std::string cache_msg = " -- memory required for caching t1,t2,v2 blocks";
+      if(total_cache_mem > (ccsd_t_mem + total_extra_buf_mem) / 2.0)
+        cache_msg += " (set cache_size option in the input file to a lower value to reduce this "
+                     "memory requirement further)";
+      std::cout << cache_msg << ": " << total_cache_mem << " GiB" << std::endl;
+      // std::cout << "***** old memory requirement was "
+      //           << ccsd_t_mem_old + total_extra_buf_mem + total_cache_mem
+      //           << " GiB (old v2 = " << sum_tensor_sizes(t_d_v2)
+      //           << " GiB, new v2 = " << v2tensors.tensor_sizes(MO1) << " GiB)" << std::endl;
+      std::cout << std::string(70, '-') << std::endl;
     }
+    check_memory_requirements(ec, total_ccsd_t_mem);
 
-    if(computeTData && !skip_ccsd) {
-      Tensor<T>::allocate(&ec,t_d_cv2);
-      retile_tamm_tensor(cholVpr,t_d_cv2,"CholV2");
-      free_tensors(cholVpr);
+  if(computeTData && !skip_ccsd) {
+    Tensor<T>::allocate(&ec, t_d_cv2);
+    retile_tamm_tensor(cholVpr, t_d_cv2, "CholV2");
+    free_tensors(cholVpr);
 
-      t_d_v2 = setupV2<T>(ec,MO1,CI,t_d_cv2,chol_count, ec.exhw());
-      if(ccsd_options.writev) {
-          write_to_disk(t_d_v2,fullV2file,true);
-          Tensor<T>::deallocate(t_d_v2);
-      }
-      free_tensors(t_d_cv2);
+    v2tensors = setupV2Tensors<T>(ec, t_d_cv2, ex_hw, v2tensors.get_blocks());
+    if(ccsd_options.writev) {
+      v2tensors.write_to_disk(files_prefix);
+      v2tensors.deallocate();
     }
+    free_tensors(t_d_cv2);
+  }
 
     double energy1=0, energy2=0;
 
@@ -687,6 +706,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
     free_tensors(t_d_t1, t_d_t2, d_f1, t_d_v2);
 
     ec.flush_and_sync();
+    #endif
 
   // GA Terminate
   // GA_Terminate();
