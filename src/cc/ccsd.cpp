@@ -212,6 +212,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   sys_data.nbf -= sys_data.n_lindep;
 
   sys_data.options_map.cd_options.diagtol          = inputs.at("diagtol").value<double>();
+  sys_data.options_map.cd_options.itilesize        = inputs.at("itilesize").value<int>();
   sys_data.options_map.cd_options.write_cv         = inputs.at("write_cv").value<bool>();
   sys_data.options_map.cd_options.write_vcount     = inputs.at("write_vcount").value<int>();
   sys_data.options_map.cd_options.max_cvecs_factor = inputs.at("max_cvecs_factor").value<int>();
@@ -220,7 +221,6 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   sys_data.options_map.ccsd_options.threshold      = inputs.at("threshold").value<double>();
   sys_data.options_map.ccsd_options.force_tilesize = inputs.at("force_tilesize").value<bool>();
   sys_data.options_map.ccsd_options.tilesize       = inputs.at("tilesize").value<int>();
-  sys_data.options_map.ccsd_options.itilesize      = inputs.at("itilesize").value<int>();
   sys_data.options_map.ccsd_options.ndiis          = inputs.at("ndiis").value<int>();
   sys_data.options_map.ccsd_options.lshift         = inputs.at("lshift").value<double>();
   sys_data.options_map.ccsd_options.ccsd_maxiter   = inputs.at("ccsd_maxiter").value<int>();

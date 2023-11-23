@@ -132,7 +132,6 @@ public:
     threshold      = 1e-6;
     force_tilesize = false;
     tilesize       = 50;
-    itilesize      = 1000;
     ndiis          = 5;
     lshift         = 0;
     ccsd_maxiter   = 50;
@@ -165,7 +164,6 @@ public:
   }
 
   int    tilesize;
-  int    itilesize;
   bool   force_tilesize;
   int    ndiis;
   int    writet_iter;
@@ -211,7 +209,6 @@ public:
     cout << " ccsd_maxiter         = " << ccsd_maxiter << endl;
     cout << " freeze_core          = " << freeze_core << endl;
     cout << " freeze_virtual       = " << freeze_virtual << endl;
-    cout << " itilesize            = " << itilesize << endl;
     if(lshift != 0) cout << " lshift               = " << lshift << endl;
     print_bool(" readt               ", readt);
     print_bool(" writet              ", writet);

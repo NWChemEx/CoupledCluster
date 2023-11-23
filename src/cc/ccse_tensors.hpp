@@ -1,9 +1,7 @@
 #pragma once
 
-#include "cd_svd/cd_svd_ga.hpp"
+#include "cd_svd/cd_svd.hpp"
 #include "cd_svd/two_index_transform.hpp"
-#include "ga/ga-mpi.h"
-#include "ga/macdecls.h"
 
 using namespace tamm;
 
