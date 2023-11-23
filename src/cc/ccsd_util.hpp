@@ -324,7 +324,7 @@ rest_cs(ExecutionContext& ec, const TiledIndexSpace& MO, Tensor<T>& d_r1, Tensor
   return {residual, energy};
 }
 
-void print_ccsd_header(const bool do_print, std::string mname="") {
+void print_ccsd_header(const bool do_print, std::string mname = "") {
   if(do_print) {
     if(mname.empty()) mname = "CCSD";
     const auto mksp = std::string(10, ' ');
@@ -535,7 +535,8 @@ V2Tensors<T> setupV2Tensors(ExecutionContext& ec, Tensor<T> cholVpr, ExecutionHW
 
 template<typename T>
 Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI, Tensor<T> cholVpr,
-                  const tamm::Tile chol_count, ExecutionHW hw = ExecutionHW::CPU, bool anti_sym = true) {
+                  const tamm::Tile chol_count, ExecutionHW hw = ExecutionHW::CPU,
+                  bool anti_sym = true) {
   auto rank = ec.pg().rank();
 
   TiledIndexSpace N = MO("all");
@@ -572,11 +573,10 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
 
 template<typename T>
 std::tuple<Tensor<T>, Tensor<T>, Tensor<T>, TAMM_SIZE, tamm::Tile, TiledIndexSpace>
-cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO,
-                 TiledIndexSpace& AO, Tensor<T> C_AO, Tensor<T> F_AO, Tensor<T> C_beta_AO,
-                 Tensor<T> F_beta_AO, libint2::BasisSet& shells,
-                 std::vector<size_t>& shell_tile_map, bool readv2 = false,
-                 std::string cholfile = "", bool is_dlpno = false, bool is_mso=true) {
+cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& AO,
+              Tensor<T> C_AO, Tensor<T> F_AO, Tensor<T> C_beta_AO, Tensor<T> F_beta_AO,
+              libint2::BasisSet& shells, std::vector<size_t>& shell_tile_map, bool readv2 = false,
+              std::string cholfile = "", bool is_dlpno = false, bool is_mso = true) {
   CDOptions cd_options        = sys_data.options_map.cd_options;
   auto      diagtol           = cd_options.diagtol; // tolerance for the max. diagonal
   cd_options.max_cvecs_factor = 2 * std::abs(std::log10(diagtol));
@@ -612,7 +612,8 @@ cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO,
   if(!readv2) {
     two_index_transform(sys_data, ec, C_AO, F_AO, C_beta_AO, F_beta_AO, d_f1, shells, lcao,
                         is_dlpno || !is_mso);
-    if(!is_dlpno) cholVpr = cd_svd(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao, is_mso);
+    if(!is_dlpno)
+      cholVpr = cd_svd(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao, is_mso);
     write_to_disk<TensorType>(lcao, lcaofile);
   }
   else {

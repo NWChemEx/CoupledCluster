@@ -52,8 +52,10 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
       }
       // replicate horizontally
       Matrix C_2N(nao, N);
-      if(is_rhf) C_2N << C_alpha_eig, C_alpha_eig;
-      else if(is_uhf) C_2N << C_alpha_eig, C_beta_eig;
+      if(is_rhf)
+        C_2N << C_alpha_eig, C_alpha_eig;
+      else if(is_uhf)
+        C_2N << C_alpha_eig, C_beta_eig;
 
       cout << "n_occ_alpha, n_vir_alpha, n_occ_beta, n_vir_beta = " << n_occ_alpha << ","
            << n_vir_alpha << "," << n_occ_beta << "," << n_vir_beta << endl;
@@ -74,7 +76,8 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
       Matrix F_MO_beta  = F_MO_alpha;
       if(is_uhf) F_MO_beta = C_beta_eig.transpose() * (F_beta_AO_eig * C_beta_eig);
 
-      // print_mo_vectors_analysis<TensorType>(sys_data, shells, C_alpha_eig, C_beta_eig, F_MO_alpha,
+      // print_mo_vectors_analysis<TensorType>(sys_data, shells, C_alpha_eig, C_beta_eig,
+      // F_MO_alpha,
       //                                       F_MO_beta, is_rhf);
 
       Matrix F;
@@ -99,7 +102,6 @@ void two_index_transform(SystemData sys_data, ExecutionContext& ec, Tensor<Tenso
       F.block(nmo_occ+n_vir_alpha, n_occ_alpha,         n_vir_beta, n_occ_beta) = F_MO_beta.block(n_occ_beta,          0, n_vir_beta, n_occ_beta);
       F.block(nmo_occ+n_vir_alpha, nmo_occ+n_vir_alpha, n_vir_beta, n_vir_beta) = F_MO_beta.block(n_occ_beta, n_occ_beta, n_vir_beta, n_vir_beta);
       // clang-format on
-
 
       eigen_to_tamm_tensor(F_MO, F);
       eigen_to_tamm_tensor(lcao, CTiled);

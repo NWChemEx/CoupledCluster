@@ -10,7 +10,6 @@
 using namespace tamm;
 using TAMM_GA_SIZE = int64_t;
 
-
 #define CD_USE_PGAS_API
 
 using shellpair_list_t = std::unordered_map<size_t, std::vector<size_t>>;
@@ -36,8 +35,8 @@ auto free_vec_tensors = [](auto&&... vecx) {
 auto free_tensors = [](auto&&... t) { ((t.deallocate()), ...); };
 
 std::tuple<shellpair_list_t, shellpair_data_t>
-compute_shellpairs(const libint2::BasisSet& bs1, const libint2::BasisSet& _bs2 = libint2::BasisSet(),
-                   double threshold = 1e-16) {                                                                    
+compute_shellpairs(const libint2::BasisSet& bs1,
+                   const libint2::BasisSet& _bs2 = libint2::BasisSet(), double threshold = 1e-16) {
   using libint2::BasisSet;
   using libint2::BraKet;
   using libint2::Engine;
@@ -128,7 +127,8 @@ std::tuple<TiledIndexSpace, TAMM_SIZE> setup_mo_red(SystemData sys_data, bool tr
         std::cout << std::endl << "Resetting CCSD tilesize to: " << tce_tile << std::endl;
     }
   }
-  else tce_tile = sys_data.options_map.ccsd_options.ccsdt_tilesize;
+  else
+    tce_tile = sys_data.options_map.ccsd_options.ccsdt_tilesize;
 
   const TAMM_SIZE total_orbitals = sys_data.nbf;
 
@@ -295,8 +295,10 @@ void update_sysdata(SystemData& sys_data, TiledIndexSpace& MO, bool is_mso = tru
       sys_data.n_vir_beta -= sys_data.n_frozen_virtual;
     }
     sys_data.update();
-    if(!is_mso) std::tie(MO, total_orbitals) = setup_mo_red(sys_data);
-    else std::tie(MO, total_orbitals) = setupMOIS(sys_data);
+    if(!is_mso)
+      std::tie(MO, total_orbitals) = setup_mo_red(sys_data);
+    else
+      std::tie(MO, total_orbitals) = setupMOIS(sys_data);
   }
 }
 
@@ -314,8 +316,10 @@ Matrix reshape_mo_matrix(SystemData sys_data, Matrix& emat, bool is_lcao = false
   const int n_frozen_virtual = sys_data.n_frozen_virtual;
 
   Matrix cvec;
-  if(!is_lcao) cvec.resize(N_eff, N_eff); // MOxMO
-  else cvec.resize(nbf, N_eff);           // AOxMO
+  if(!is_lcao)
+    cvec.resize(N_eff, N_eff); // MOxMO
+  else
+    cvec.resize(nbf, N_eff); // AOxMO
 
   const int block2_off     = 2 * n_frozen_core + noa;
   const int block3_off     = 2 * n_frozen_core + nocc;
@@ -373,11 +377,10 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
 
   std::vector<size_t>     shell_tile_map;
   std::vector<tamm::Tile> AO_tiles, AO_opttiles;
-  shellpair_list_t obs_shellpair_list; 
-  shellpair_data_t obs_shellpair_data;
+  shellpair_list_t        obs_shellpair_list;
+  shellpair_data_t        obs_shellpair_data;
 
-  std::tie(shell_tile_map, AO_tiles, AO_opttiles) =
-    compute_AO_tiles(ec, sys_data, shells);
+  std::tie(shell_tile_map, AO_tiles, AO_opttiles)  = compute_AO_tiles(ec, sys_data, shells);
   std::tie(obs_shellpair_list, obs_shellpair_data) = compute_shellpairs(shells);
 
   auto shell2bf = map_shell_to_basis_function(shells);
@@ -576,8 +579,10 @@ Tensor<TensorType> cd_svd(SystemData& sys_data, ExecutionContext& ec, TiledIndex
     std::ifstream in(cv_count_file, std::ios::in);
     int           rstatus = 0;
     if(in.is_open()) rstatus = 1;
-    if(rstatus == 1) in >> count;
-    else tamm_terminate("Error reading " + cv_count_file);
+    if(rstatus == 1)
+      in >> count;
+    else
+      tamm_terminate("Error reading " + cv_count_file);
 
     if(rank == 0)
       cout << endl << "- [CD restart] Number of cholesky vectors read = " << count << endl;

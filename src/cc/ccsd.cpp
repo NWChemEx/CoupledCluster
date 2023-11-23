@@ -210,7 +210,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   // Check: Compute Northo
   sys_data.n_lindep = sys_data.nbf_orig - sys_data.n_occ_alpha - sys_data.n_vir_alpha;
   sys_data.nbf -= sys_data.n_lindep;
-  
+
   sys_data.options_map.cd_options.diagtol          = inputs.at("diagtol").value<double>();
   sys_data.options_map.cd_options.write_cv         = inputs.at("write_cv").value<bool>();
   sys_data.options_map.cd_options.write_vcount     = inputs.at("write_vcount").value<int>();
@@ -261,21 +261,22 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   // Setup SCF data in TAMM
   const auto scf_conv = true;
 
-  std::vector<size_t>     shell_tile_map; //not used
+  std::vector<size_t>     shell_tile_map; // not used
   std::vector<tamm::Tile> AO_tiles, AO_opttiles;
 
-  auto       ao_ts    = static_cast<tamm::Tile>(std::ceil(sys_data.nbf_orig * 0.05));
-  if(sys_data.AO_tilesize > ao_ts) ao_ts = sys_data.AO_tilesize;
-  else sys_data.AO_tilesize = ao_ts;
+  auto ao_ts = static_cast<tamm::Tile>(std::ceil(sys_data.nbf_orig * 0.05));
+  if(sys_data.AO_tilesize > ao_ts)
+    ao_ts = sys_data.AO_tilesize;
+  else
+    sys_data.AO_tilesize = ao_ts;
 
-  std::tie(shell_tile_map, AO_tiles, AO_opttiles) =
-    compute_AO_tiles(ec, sys_data, li_shells);
-  
+  std::tie(shell_tile_map, AO_tiles, AO_opttiles) = compute_AO_tiles(ec, sys_data, li_shells);
+
   TiledIndexSpace AO_opt{IndexSpace{range(0, (size_t) (sys_data.nbf))}, AO_opttiles};
   TiledIndexSpace AO_ortho{IndexSpace{range(0, (size_t) (sys_data.nbf_orig))}, ao_ts};
 
-  tamm::Tensor<T>     C_AO{AO_opt, AO_ortho}, F_AO{AO_opt, AO_opt};
-  tamm::Tensor<T>     C_beta_AO{AO_opt, AO_ortho}, F_beta_AO{AO_opt, AO_opt}; // not used
+  tamm::Tensor<T> C_AO{AO_opt, AO_ortho}, F_AO{AO_opt, AO_opt};
+  tamm::Tensor<T> C_beta_AO{AO_opt, AO_ortho}, F_beta_AO{AO_opt, AO_opt}; // not used
   tamm::Tensor<T>::allocate(&ec, C_AO, F_AO);
   if(rank == 0) {
     Matrix C_AO_eig(sys_data.nbf_orig, sys_data.nbf); // NxNortho
@@ -317,7 +318,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
 
   auto [cholVpr, d_f1_, lcao, chol_count, max_cvecs, CI] =
     cd_svd_driver<T>(sys_data, ec, MO, AO_opt, C_AO, F_AO, C_beta_AO, F_beta_AO, li_shells,
-                        shell_tile_map, ccsd_restart, cholfile);
+                     shell_tile_map, ccsd_restart, cholfile);
 
   Tensor<T> d_f1 = d_f1_;
 

@@ -219,7 +219,7 @@ void write_json_data(SystemData& sys_data, const std::string module) {
 
 std::tuple<std::vector<size_t>, std::vector<Tile>, std::vector<Tile>>
 compute_AO_tiles(const ExecutionContext& ec, const SystemData& sys_data, libint2::BasisSet& shells,
-                 const bool is_df=false) {
+                 const bool is_df = false) {
   auto rank      = ec.pg().rank();
   int  tile_size = sys_data.AO_tilesize;
   if(is_df) tile_size = sys_data.dfAO_tilesize;
