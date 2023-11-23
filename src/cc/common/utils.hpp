@@ -4,6 +4,16 @@
 
 using TensorType = double;
 
+inline void check_memory_requirements(ExecutionContext& ec, double calc_mem) {
+  auto minfo = ec.mem_info();
+  if(calc_mem > static_cast<double>(minfo.total_cpu_mem)) {
+    ec.print_mem_info();
+    std::string err_msg = "ERROR: Insufficient CPU memory, required = " + std::to_string(calc_mem) +
+                          "GiB, available = " + std::to_string(minfo.total_cpu_mem) + " GiB";
+    tamm_terminate(err_msg);
+  }
+}
+
 std::vector<size_t> map_shell_to_basis_function(const libint2::BasisSet& shells) {
   std::vector<size_t> result;
   result.reserve(shells.size());
@@ -139,8 +149,8 @@ public:
     TCutDOij      = 1e-5;
     TCutDOPre     = 3e-2;
 
-    ngpu           = 0;
-    ccsdt_tilesize = 28;
+    cache_size     = 8;
+    ccsdt_tilesize = 32;
   }
 
   int    tilesize;
@@ -159,7 +169,7 @@ public:
   int freeze_virtual;
 
   // CCSD(T)
-  int ngpu;
+  int cache_size;
   int ccsdt_tilesize;
 
   // DLPNO
@@ -181,10 +191,6 @@ public:
     std::cout << std::defaultfloat;
     cout << endl << "CCSD Options" << endl;
     cout << "{" << endl;
-    // if(ngpu > 0) {
-    //   cout << " ngpu                 = " << ngpu          << endl;
-    //   cout << " ccsdt_tilesize       = " << ccsdt_tilesize << endl;
-    // }
     cout << " ndiis                = " << ndiis << endl;
     cout << " printtol             = " << std::scientific << std::setprecision(2) << printtol
          << endl;

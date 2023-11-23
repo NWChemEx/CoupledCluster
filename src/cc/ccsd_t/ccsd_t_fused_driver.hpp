@@ -1,3 +1,4 @@
+
 #pragma once
 
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
@@ -7,6 +8,8 @@
 #endif
 #include "ccsd_t_common.hpp"
 
+void ccsd_t_driver(std::string filename, OptionsMap options_map);
+
 void finalizememmodule();
 
 /**
@@ -15,7 +18,7 @@ void finalizememmodule();
  *  - requirements: (1) arch >= 80 and (2) driver >= 11.2?
  **/
 #if defined(USE_CUDA)
-int checkCudaKernelCompatible(bool r0) {
+inline int checkCudaKernelCompatible(bool r0) {
   int            version = 0;
   cudaDeviceProp dP;
 
@@ -26,17 +29,6 @@ int checkCudaKernelCompatible(bool r0) {
     return cuda_arch; /* Failure */
   }
   // printf ("[%s] dP.major: %d, dP.minor: %d\n", __func__, dP.major, dP.minor);
-
-#if 0
-  // Returns the latest version of CUDA supported by the driver.
-  int driverVersion = 0;
-  cudaError_t cuda_driverVersion = cudaDriverGetVersion(&driverVersion);
-  if (cuda_driverVersion != cudaSuccess) {
-    cudaError_t error = cudaGetLastError();
-    if(r0) printf ("CUDA error: %s", cudaGetErrorString(error));
-    return cuda_driverVersion;
-  }
-#endif
 
   // the version is returned as (1000 major + 10 minior)
   cudaError_t cuda_driver = cudaRuntimeGetVersion(&version);
@@ -62,8 +54,8 @@ int checkCudaKernelCompatible(bool r0) {
 template<typename T>
 std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
   SystemData& sys_data, ExecutionContext& ec, std::vector<int>& k_spin, const TiledIndexSpace& MO,
-  Tensor<T>& d_t1, Tensor<T>& d_t2, Tensor<T>& d_v2, std::vector<T>& k_evl_sorted, T hf_ccsd_energy,
-  int nDevices, bool is_restricted, LRUCache<Index, std::vector<T>>& cache_s1t,
+  Tensor<T>& d_t1, Tensor<T>& d_t2, V2Tensors<T>& d_v2, std::vector<T>& k_evl_sorted,
+  T hf_ccsd_energy, bool is_restricted, LRUCache<Index, std::vector<T>>& cache_s1t,
   LRUCache<Index, std::vector<T>>& cache_s1v, LRUCache<Index, std::vector<T>>& cache_d1t,
   LRUCache<Index, std::vector<T>>& cache_d1v, LRUCache<Index, std::vector<T>>& cache_d2t,
   LRUCache<Index, std::vector<T>>& cache_d2v, bool seq_h3b = false, bool tilesize_opt = true) {
@@ -103,8 +95,6 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
     // cout << "k_spin = " << k_spin << endl;
     // cout << "k_range = " << k_range << endl;
     cout << "MO Tiles = " << mo_tiles << endl;
-
-    cout << "Using " << nDevices << " gpu devices per node" << endl << endl;
   }
 
   // TODO replicate d_t1 L84-89 ccsd_t_gpu.F
@@ -115,9 +105,29 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
   energy_l[0] = 0.0;
   energy_l[1] = 0.0;
 
-#if defined(USE_DPCPP)
-  std::vector<gpuEvent_t> done_copy(12);
-  gpuEvent_t              done_compute;
+#if defined(USE_CUDA)
+  std::shared_ptr<gpuEvent_t> done_compute(new gpuEvent_t,
+                                           [](gpuEvent_t* e) { CUDA_SAFE(cudaEventDestroy(*e)); });
+  CUDA_SAFE(cudaEventCreateWithFlags(done_compute.get(), cudaEventDisableTiming));
+  std::shared_ptr<gpuEvent_t> done_copy(new gpuEvent_t,
+                                        [](gpuEvent_t* e) { CUDA_SAFE(cudaEventDestroy(*e)); });
+  CUDA_SAFE(cudaEventCreateWithFlags(done_copy.get(), cudaEventDisableTiming));
+
+  std::shared_ptr<hostEnergyReduceData_t> reduceData = std::make_shared<hostEnergyReduceData_t>();
+#elif defined(USE_HIP)
+  std::shared_ptr<gpuEvent_t> done_compute(new gpuEvent_t,
+                                           [](gpuEvent_t* e) { HIP_SAFE(hipEventDestroy(*e)); });
+  HIP_SAFE(hipEventCreateWithFlags(done_compute.get(), hipEventDisableTiming));
+  std::shared_ptr<gpuEvent_t> done_copy(new gpuEvent_t,
+                                        [](gpuEvent_t* e) { HIP_SAFE(hipEventDestroy(*e)); });
+  HIP_SAFE(hipEventCreateWithFlags(done_copy.get(), hipEventDisableTiming));
+
+  std::shared_ptr<hostEnergyReduceData_t> reduceData = std::make_shared<hostEnergyReduceData_t>();
+#elif defined(USE_DPCPP)
+  std::shared_ptr<gpuEvent_t> done_compute = std::make_shared<gpuEvent_t>();
+  std::shared_ptr<gpuEvent_t> done_copy    = std::make_shared<gpuEvent_t>();
+
+  std::shared_ptr<hostEnergyReduceData_t> reduceData = std::make_shared<hostEnergyReduceData_t>();
 #endif
 
   AtomicCounter* ac = new AtomicCounterGA(ec.pg(), 1);
@@ -184,7 +194,8 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
 
   T* df_host_energies = (T*) getHostMem(sizeof(T) * std::pow(max_num_blocks, 6) * 2);
 #if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
-  T* df_dev_energies = static_cast<T*>(memPool.allocate(sizeof(T) * std::pow(max_num_blocks, 6) * 2));
+  T* df_dev_energies =
+    static_cast<T*>(memPool.allocate(sizeof(T) * std::pow(max_num_blocks, 6) * 2));
 #endif
 
   //
@@ -241,12 +252,13 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                         size_T_s1_t1, size_T_s1_v2, size_T_d1_t2, size_T_d1_v2, size_T_d2_t2,
                         size_T_d2_v2,
                         //
-                        energy_l, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v
-#if defined(USE_DPCPP)
-                        ,
-                        done_compute, done_copy
+                        energy_l,
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+                        reduceData.get(),
 #endif
-                      );
+                        cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
+                        //
+                        done_compute.get(), done_copy.get());
 #else
                       total_fused_ccsd_t_cpu<T>(
                         is_restricted, noab, nvab, rank, k_spin, k_range, k_offset, d_t1, d_t2,
@@ -343,12 +355,13 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                         size_T_s1_t1, size_T_s1_v2, size_T_d1_t2, size_T_d1_v2, size_T_d2_t2,
                         size_T_d2_v2,
                         //
-                        energy_l, cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v
-#if defined(USE_DPCPP)
-                        ,
-                        done_compute, done_copy
+                        energy_l,
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+                        reduceData.get(),
 #endif
-                      );
+                        cache_s1t, cache_s1v, cache_d1t, cache_d1v, cache_d2t, cache_d2v,
+                        //
+                        done_compute.get(), done_copy.get());
 #else
             total_fused_ccsd_t_cpu<T>(
               is_restricted, noab, nvab, rank, k_spin, k_range, k_offset, d_t1, d_t2, d_v2,
@@ -382,10 +395,8 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
     }
   } // end seq h3b
 
-#if defined(USE_CUDA)
-  CUDA_SAFE(cudaDeviceSynchronize());
-#elif defined(USE_HIP)
-HIP_SAFE(hipDeviceSynchronize());
+#if defined(USE_CUDA) || defined(USE_HIP) || defined(USE_DPCPP)
+  gpuDeviceSynchronize();
 #endif
   //
   energy1 = energy_l[0];
@@ -420,7 +431,8 @@ HIP_SAFE(hipDeviceSynchronize());
   memPool.deallocate(static_cast<void*>(df_dev_d2_t2_all), sizeof(T) * size_T_d2_t2);
   memPool.deallocate(static_cast<void*>(df_dev_d2_v2_all), sizeof(T) * size_T_d2_v2);
 
-  memPool.deallocate(static_cast<void*>(df_dev_energies), sizeof(T) * std::pow(max_num_blocks, 6) * 2);
+  memPool.deallocate(static_cast<void*>(df_dev_energies),
+                     sizeof(T) * std::pow(max_num_blocks, 6) * 2);
 #endif
 
   //
@@ -447,8 +459,7 @@ template<typename T>
 void ccsd_t_fused_driver_calculator_ops(SystemData& sys_data, ExecutionContext& ec,
                                         std::vector<int>& k_spin, const TiledIndexSpace& MO,
                                         std::vector<T>& k_evl_sorted, double hf_ccsd_energy,
-                                        int nDevices, bool is_restricted,
-                                        long double& total_num_ops,
+                                        bool is_restricted, long double& total_num_ops,
                                         //
                                         bool seq_h3b = false) {
   //
