@@ -46,7 +46,9 @@ inline int checkCudaKernelCompatible(bool r0) {
            driver_major, driver_minor);
 
   if(dP.major >= 8 && driver_major >= 11 && driver_minor >= 1) { return 1; }
-  else { return -1; }
+  else {
+    return -1;
+  }
 }
 #endif
 
@@ -220,10 +222,14 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
                       T factor = 1.0;
                       if(is_restricted) factor = 2.0;
                       if((t_p4b == t_p5b) && (t_p5b == t_p6b)) { factor /= 6.0; }
-                      else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) { factor /= 2.0; }
+                      else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) {
+                        factor /= 2.0;
+                      }
 
                       if((t_h1b == t_h2b) && (t_h2b == t_h3b)) { factor /= 6.0; }
-                      else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) { factor /= 2.0; }
+                      else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) {
+                        factor /= 2.0;
+                      }
 
                       num_task++;
 
@@ -322,10 +328,14 @@ std::tuple<T, T, double, double> ccsd_t_fused_driver_new(
 
                       //
                       if((t_p4b == t_p5b) && (t_p5b == t_p6b)) { factor /= 6.0; }
-                      else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) { factor /= 2.0; }
+                      else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) {
+                        factor /= 2.0;
+                      }
 
                       if((t_h1b == t_h2b) && (t_h2b == t_h3b)) { factor /= 6.0; }
-                      else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) { factor /= 2.0; }
+                      else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) {
+                        factor /= 2.0;
+                      }
 
                       //
                       num_task++;
@@ -498,10 +508,14 @@ void ccsd_t_fused_driver_calculator_ops(SystemData& sys_data, ExecutionContext& 
                     double factor = 1.0;
                     if(is_restricted) factor = 2.0;
                     if((t_p4b == t_p5b) && (t_p5b == t_p6b)) { factor /= 6.0; }
-                    else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) { factor /= 2.0; }
+                    else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) {
+                      factor /= 2.0;
+                    }
 
                     if((t_h1b == t_h2b) && (t_h2b == t_h3b)) { factor /= 6.0; }
-                    else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) { factor /= 2.0; }
+                    else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) {
+                      factor /= 2.0;
+                    }
 
                     //
                     list_tasks.push_back(
@@ -531,10 +545,14 @@ void ccsd_t_fused_driver_calculator_ops(SystemData& sys_data, ExecutionContext& 
                     if(is_restricted) factor = 2.0;
                     //
                     if((t_p4b == t_p5b) && (t_p5b == t_p6b)) { factor /= 6.0; }
-                    else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) { factor /= 2.0; }
+                    else if((t_p4b == t_p5b) || (t_p5b == t_p6b)) {
+                      factor /= 2.0;
+                    }
 
                     if((t_h1b == t_h2b) && (t_h2b == t_h3b)) { factor /= 6.0; }
-                    else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) { factor /= 2.0; }
+                    else if((t_h1b == t_h2b) || (t_h2b == t_h3b)) {
+                      factor /= 2.0;
+                    }
 
                     //
                     list_tasks.push_back(

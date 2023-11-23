@@ -1,10 +1,9 @@
-#include "cd_ccsd_cs_ann.hpp"
+#include "cc/property_types.hpp"
 #include "cc_modules.hpp"
+#include "ccsd_t/ccsd_t_fused_driver.hpp"
+#include "cd_ccsd_cs_ann.hpp"
 #include <libint2.hpp>
 #include <simde/simde.hpp>
-#include "ccsd_t/ccsd_t_fused_driver.hpp"
-#include "cc/property_types.hpp"
-
 
 namespace ccsd {
 
@@ -15,65 +14,64 @@ using ee_pt  = simde::CanonicalElectronicEnergy;
 using ce_pt =
   simde::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
 
-using ccsd_pt =
-  coupledcluster::CorrelationEnergy<simde::type::canonical_reference, simde::type::canonical_reference>;
+using ccsd_pt = coupledcluster::CorrelationEnergy<simde::type::canonical_reference,
+                                                  simde::type::canonical_reference>;
 
 inline libint2::BasisSet ccsd_make_basis(const simde::type::ao_basis_set& bs) {
-    /// Typedefs for everything
-    using atom_t          = libint2::Atom;
-    using shell_t         = libint2::Shell;
-    using basis_t         = libint2::BasisSet;
-    using cont_t          = libint2::Shell::Contraction;
-    using svec_d_t        = libint2::svector<double>;
-    using conts_t         = libint2::svector<cont_t>;
-    using centers_t       = std::vector<atom_t>;
-    using atom_bases_t    = std::vector<shell_t>;
-    using element_bases_t = std::vector<atom_bases_t>;
+  /// Typedefs for everything
+  using atom_t          = libint2::Atom;
+  using shell_t         = libint2::Shell;
+  using basis_t         = libint2::BasisSet;
+  using cont_t          = libint2::Shell::Contraction;
+  using svec_d_t        = libint2::svector<double>;
+  using conts_t         = libint2::svector<cont_t>;
+  using centers_t       = std::vector<atom_t>;
+  using atom_bases_t    = std::vector<shell_t>;
+  using element_bases_t = std::vector<atom_bases_t>;
 
-    /// Inputs for BasisSet constructor
-    centers_t centers{};
-    element_bases_t element_bases{};
+  /// Inputs for BasisSet constructor
+  centers_t       centers{};
+  element_bases_t element_bases{};
 
-    /// Atom doesn't have a value ctor, so here's a stand in
-    auto atom_ctor = [](int Z, double x, double y, double z) {
-        atom_t atom{};
-        atom.atomic_number = Z;
-        atom.x             = x;
-        atom.y             = y;
-        atom.z             = z;
-        return atom;
-    };
+  /// Atom doesn't have a value ctor, so here's a stand in
+  auto atom_ctor = [](int Z, double x, double y, double z) {
+    atom_t atom{};
+    atom.atomic_number = Z;
+    atom.x             = x;
+    atom.y             = y;
+    atom.z             = z;
+    return atom;
+  };
 
-    /// Origin for shell construction
-    std::array<double, 3> origin = {0.0, 0.0, 0.0};
+  /// Origin for shell construction
+  std::array<double, 3> origin = {0.0, 0.0, 0.0};
 
-    /// Convert centers and their shells to libint equivalents.
-    for(auto abs_i = 0; abs_i < bs.size(); ++abs_i) {
-        /// Add current center to atoms list
-        const auto& abs = bs[abs_i];
-        centers.push_back(atom_ctor(abs_i, abs.center().x(), abs.center().y(),
-                                    abs.center().z()));
+  /// Convert centers and their shells to libint equivalents.
+  for(auto abs_i = 0; abs_i < bs.size(); ++abs_i) {
+    /// Add current center to atoms list
+    const auto& abs = bs[abs_i];
+    centers.push_back(atom_ctor(abs_i, abs.center().x(), abs.center().y(), abs.center().z()));
 
-        /// Gather shells for this center and add them to element_bases
-        atom_bases_t atom_bases{};
-        for(const auto&& shelli : abs) {
-            const auto nprims = shelli.n_primitives();
-            const auto prim0  = shelli.primitive(0);
-            const auto primN  = shelli.primitive(nprims - 1);
-            const bool pure   = shelli.pure() == chemist::ShellType::pure;
-            const int l       = shelli.l();
+    /// Gather shells for this center and add them to element_bases
+    atom_bases_t atom_bases{};
+    for(const auto&& shelli: abs) {
+      const auto nprims = shelli.n_primitives();
+      const auto prim0  = shelli.primitive(0);
+      const auto primN  = shelli.primitive(nprims - 1);
+      const bool pure   = shelli.pure() == chemist::ShellType::pure;
+      const int  l      = shelli.l();
 
-            svec_d_t alphas(&prim0.exponent(), &primN.exponent() + 1);
-            svec_d_t coefs(&prim0.coefficient(), &primN.coefficient() + 1);
-            conts_t conts{cont_t{l, pure, coefs}};
-            /// Use origin for position, because BasisSet moves shells to center
-            atom_bases.push_back(shell_t(alphas, conts, origin));
-        }
-        element_bases.push_back(atom_bases);
+      svec_d_t alphas(&prim0.exponent(), &primN.exponent() + 1);
+      svec_d_t coefs(&prim0.coefficient(), &primN.coefficient() + 1);
+      conts_t  conts{cont_t{l, pure, coefs}};
+      /// Use origin for position, because BasisSet moves shells to center
+      atom_bases.push_back(shell_t(alphas, conts, origin));
     }
+    element_bases.push_back(atom_bases);
+  }
 
-    /// Return the new basis set
-    return basis_t(centers, element_bases);
+  /// Return the new basis set
+  return basis_t(centers, element_bases);
 }
 
 // DECLARE_MODULE(CCSD);
@@ -168,17 +166,17 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
   const auto& [bra, H_e, ket] = ce_pt::unwrap_inputs(inputs);
-  const auto& i                 = bra.basis_set().occupied_orbitals();
-  const auto& a                 = bra.basis_set().virtual_orbitals();
+  const auto& i               = bra.basis_set().occupied_orbitals();
+  const auto& a               = bra.basis_set().virtual_orbitals();
 
   const auto& bra_aos = bra.basis_set().occupied_orbitals().from_space();
 
   auto& f_mod = submods.at("Fock Builder");
 
-  const auto& f_hat       = bra.basis_set().fock_operator();
-  const auto& f_wrapper   = f_mod.run_as<f_pt>(bra_aos, f_hat, bra_aos);
+  const auto& f_hat     = bra.basis_set().fock_operator();
+  const auto& f_wrapper = f_mod.run_as<f_pt>(bra_aos, f_hat, bra_aos);
 
-  auto& ee_mod     = submods.at("Electronic Energy");
+  auto& ee_mod    = submods.at("Electronic Energy");
   auto  hf_energy = ee_mod.run_as<ee_pt>(bra, H_e, ket);
 
   const auto& C_occ  = i.C();
@@ -188,9 +186,9 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   Matrix C_occ_eig  = tensor_wrapper_to_eigen(C_occ);
   Matrix C_virt_eig = tensor_wrapper_to_eigen(C_virt);
 
-  auto              nwx_shells     = bra.basis_set().occupied_orbitals().from_space().basis_set();
-  auto              nbf            = nwx_shells.n_aos();
-  auto              basis_set_name = nwx_shells[0].basis_set_name();
+  auto nwx_shells     = bra.basis_set().occupied_orbitals().from_space().basis_set();
+  auto nbf            = nwx_shells.n_aos();
+  auto basis_set_name = nwx_shells[0].basis_set_name();
 
   libint2::BasisSet li_shells = ccsd_make_basis(nwx_shells);
 
@@ -229,11 +227,11 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   sys_data.options_map.ccsd_options.ccsdt_tilesize = inputs.at("ccsdt_tilesize").value<int>();
 
   // TODO: get
-  sys_data.input_molecule     = "h2o";
-  sys_data.output_file_prefix = sys_data.input_molecule;
-  sys_data.basis = basis_set_name.value();
+  sys_data.input_molecule                 = "h2o";
+  sys_data.output_file_prefix             = sys_data.input_molecule;
+  sys_data.basis                          = basis_set_name.value();
   sys_data.options_map.ccsd_options.basis = sys_data.basis;
-  sys_data.scf_energy                                      = hf_energy;
+  sys_data.scf_energy                     = hf_energy;
 
   sys_data.update();
 
@@ -428,35 +426,34 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   if(is_rhf) free_tensors(d_t1, d_t2);
   ec.flush_and_sync();
 
+#if 1
 
-  #if 1
+  // double ccsdt_s1_t1_GetTime;
+  // double ccsdt_s1_v2_GetTime;
+  // double ccsd_t_data_per_rank;
+  // double ccsdt_d1_t2_GetTime;
+  // double ccsdt_d1_v2_GetTime;
+  // double ccsdt_d2_t2_GetTime;
+  // double ccsdt_d2_v2_GetTime;
 
-    // double ccsdt_s1_t1_GetTime;
-    // double ccsdt_s1_v2_GetTime;
-    // double ccsd_t_data_per_rank;
-    // double ccsdt_d1_t2_GetTime;
-    // double ccsdt_d1_v2_GetTime;
-    // double ccsdt_d2_t2_GetTime;
-    // double ccsdt_d2_v2_GetTime;
+  // else { //skip ccsd
+  //     d_f1 = {{N,N},{1,1}};
+  //     Tensor<T>::allocate(&ec,d_f1);
+  // }
 
-    // else { //skip ccsd
-    //     d_f1 = {{N,N},{1,1}};
-    //     Tensor<T>::allocate(&ec,d_f1);
-    // }
+  auto [MO1, total_orbitals1] = setupMOIS(sys_data, true);
+  TiledIndexSpace N1          = MO1("all");
+  TiledIndexSpace O1          = MO1("occ");
+  TiledIndexSpace V1          = MO1("virt");
 
-    auto [MO1,total_orbitals1] = setupMOIS(sys_data,true);
-    TiledIndexSpace N1 = MO1("all");
-    TiledIndexSpace O1 = MO1("occ");
-    TiledIndexSpace V1 = MO1("virt");
+  // Tensor<T> d_v2{{N,N,N,N},{2,2}};
+  // Tensor<T> t_d_f1{{N1,N1},{1,1}};
+  Tensor<T>    t_d_t1{{V1, O1}, {1, 1}};
+  Tensor<T>    t_d_t2{{V1, V1, O1, O1}, {2, 2}};
+  Tensor<T>    t_d_cv2{{N1, N1, CI}, {1, 1}};
+  V2Tensors<T> v2tensors({"ijab", "ijka", "iabc"});
 
-    // Tensor<T> d_v2{{N,N,N,N},{2,2}};
-    // Tensor<T> t_d_f1{{N1,N1},{1,1}};
-    Tensor<T> t_d_t1{{V1,O1},{1,1}};
-    Tensor<T> t_d_t2{{V1,V1,O1,O1},{2,2}};
-    Tensor<T>    t_d_cv2{{N1, N1, CI}, {1, 1}};
-    V2Tensors<T> v2tensors({"ijab", "ijka", "iabc"});
-
-    bool skip_ccsd{false};
+  bool skip_ccsd{false};
 
   T            ccsd_t_mem{};
   const double gib   = (1024 * 1024 * 1024.0);
@@ -469,8 +466,10 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   if(!skip_ccsd) {
     // auto v2_setup_mem = sum_tensor_sizes(d_f1,t_d_v2,t_d_cv2);
     // auto cv2_retile = (Nsize*Nsize*cind_size*8)/gib + sum_tensor_sizes(d_f1,cholVpr,t_d_cv2);
-    if(is_rhf) ccsd_t_mem += sum_tensor_sizes(dt1_full, dt2_full);
-    else ccsd_t_mem += sum_tensor_sizes(d_t1, d_t2);
+    if(is_rhf)
+      ccsd_t_mem += sum_tensor_sizes(dt1_full, dt2_full);
+    else
+      ccsd_t_mem += sum_tensor_sizes(d_t1, d_t2);
 
     // retiling allocates full GA versions of the t1,t2 tensors.
     ccsd_t_mem += (Osize * Vsize + Vsize * Vsize * Osize * Osize) * 8 / gib;
@@ -479,11 +478,11 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   // const auto ccsd_t_mem_old = ccsd_t_mem + sum_tensor_sizes(t_d_v2);
   ccsd_t_mem += v2tensors.tensor_sizes(MO1);
 
-  Index noab       = MO1("occ").num_tiles();
-  Index nvab       = MO1("virt").num_tiles();
-  Index cache_size = ccsd_options.cache_size;
-  auto ccsdt_tilesize = ccsd_options.ccsdt_tilesize;
-  auto ex_hw = ec.exhw();
+  Index noab           = MO1("occ").num_tiles();
+  Index nvab           = MO1("virt").num_tiles();
+  Index cache_size     = ccsd_options.cache_size;
+  auto  ccsdt_tilesize = ccsd_options.ccsdt_tilesize;
+  auto  ex_hw          = ec.exhw();
 
   {
     Index noa    = MO1("occ_alpha").num_tiles();
@@ -520,7 +519,6 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
     cache_mem_per_rank += (noab + nvab) * 2 * cache_size * cache_buf_size; // d1,d2 t2+v2
     cache_mem_per_rank     = cache_mem_per_rank / gib;
     double total_cache_mem = cache_mem_per_rank * nranks; // GiB
-
 
     double total_ccsd_t_mem = ccsd_t_mem + total_extra_buf_mem + total_cache_mem;
     if(rank == 0) {
@@ -608,17 +606,19 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
     v2tensors.read_from_disk(files_prefix);
   }
 
-    if(!is_rhf && !skip_ccsd) free_tensors(d_t1, d_t2);
+  if(!is_rhf && !skip_ccsd) free_tensors(d_t1, d_t2);
 
-    p_evl_sorted = tamm::diagonal(d_f1);
+  p_evl_sorted = tamm::diagonal(d_f1);
 
-    // cc_t1 = std::chrono::high_resolution_clock::now();
+  // cc_t1 = std::chrono::high_resolution_clock::now();
 
   bool is_restricted = is_rhf;
 
   if(rank == 0) {
-    if(is_restricted) cout << endl << "Running Closed Shell CCSD(T) calculation" << endl;
-    else cout << endl << "Running Open Shell CCSD(T) calculation" << endl;
+    if(is_restricted)
+      cout << endl << "Running Closed Shell CCSD(T) calculation" << endl;
+    else
+      cout << endl << "Running Open Shell CCSD(T) calculation" << endl;
   }
 
   bool                            seq_h3b = true;
@@ -666,21 +666,21 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
       hf_energy + corr_energy + energy2;
   }
 
-
-    long double total_num_ops = 0;  
-    //
-    if (rank == 0)     
-    {
-        // std::cout << "--------------------------------------------------------------------" << std::endl;
+  long double total_num_ops = 0;
+  //
+  if(rank == 0) {
+    // std::cout << "--------------------------------------------------------------------" <<
+    // std::endl;
     ccsd_t_fused_driver_calculator_ops<T>(sys_data, ec, k_spin, MO1, p_evl_sorted,
                                           hf_energy + corr_energy, is_restricted, total_num_ops,
                                           seq_h3b);
-        // std::cout << "--------------------------------------------------------------------" << std::endl;
-    }
+    // std::cout << "--------------------------------------------------------------------" <<
+    // std::endl;
+  }
 
-    ec.pg().barrier();
+  ec.pg().barrier();
 
-     auto nranks = ec.pg().size().value();
+  auto nranks = ec.pg().size().value();
 
   auto print_profile_stats = [&](const std::string& timer_type, const double g_tval,
                                  const double tval_min, const double tval_max) {
@@ -736,8 +736,8 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   free_tensors(t_d_t1, t_d_t2, d_f1);
   v2tensors.deallocate();
 
-    ec.flush_and_sync();
-    #endif
+  ec.flush_and_sync();
+#endif
 
   // GA Terminate
   // GA_Terminate();

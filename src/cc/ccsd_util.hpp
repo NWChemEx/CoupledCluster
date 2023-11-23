@@ -128,7 +128,6 @@ public:
   }
 };
 
-
 template<typename T>
 void setup_full_t1t2(ExecutionContext& ec, const TiledIndexSpace& MO, Tensor<T>& dt1_full,
                      Tensor<T>& dt2_full) {
@@ -478,7 +477,8 @@ void ccsd_stats(ExecutionContext& ec, double hf_energy, double residual, double 
 
 template<typename T>
 V2Tensors<T> setupV2Tensors(ExecutionContext& ec, Tensor<T> cholVpr, ExecutionHW ex_hw,
-                            std::vector<std::string> blocks = {"ijab", "iajb", "ijka", "ijkl", "iabc", "abcd"}) {
+                            std::vector<std::string> blocks = {"ijab", "iajb", "ijka", "ijkl",
+                                                               "iabc", "abcd"}) {
   TiledIndexSpace MO    = cholVpr.tiled_index_spaces()[0]; // MO
   TiledIndexSpace CI    = cholVpr.tiled_index_spaces()[2]; // CI
   auto [cind]           = CI.labels<1>("all");

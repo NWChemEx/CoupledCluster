@@ -7,7 +7,7 @@ template<typename T>
 DECLARE_MODULE(CCSD);
 
 inline void set_defaults(pluginplay::ModuleManager& mm) {
-    // mm.change_submod("CCSD", "Energy", "Energy");
+  // mm.change_submod("CCSD", "Energy", "Energy");
 }
 
 template<typename T>
