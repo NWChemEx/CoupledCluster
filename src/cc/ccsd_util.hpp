@@ -3,16 +3,6 @@
 #include "ccse_tensors.hpp"
 #include <ctime>
 
-auto sum_tensor_sizes = [](auto&&... t) {
-  return ((compute_tensor_size(t) + ...) * 8) / (1024 * 1024 * 1024.0);
-};
-
-auto free_vec_tensors = [](auto&&... vecx) {
-  (std::for_each(vecx.begin(), vecx.end(), [](auto& t) { t.deallocate(); }), ...);
-};
-
-auto free_tensors = [](auto&&... t) { ((t.deallocate()), ...); };
-
 template<typename T>
 class V2Tensors {
   std::map<std::string, Tensor<T>> tmap;
@@ -223,14 +213,12 @@ std::string ccsd_test(int argc, char* argv[]) {
 void iteration_print(SystemData& sys_data, const ProcGroup& pg, int iter, double residual,
                      double energy, double time, string cmethod = "CCSD") {
   if(pg.rank() == 0) {
-    std::cout.width(6);
-    std::cout << std::right << iter + 1 << "  ";
-    std::cout << std::setprecision(13) << residual << "  ";
-    std::cout << std::fixed << std::setprecision(13) << energy << " ";
+    std::cout << std::setw(4) << std::right << iter + 1 << "     ";
+    std::cout << std::setprecision(13) << std::setw(16) << std::left << residual << "  ";
+    std::cout << std::fixed << std::setprecision(13) << std::right << std::setw(16) << energy
+              << " ";
     std::cout << std::fixed << std::setprecision(2);
-    std::cout << std::string(4, ' ') << "0.0";
-    std::cout << std::string(5, ' ') << time;
-    std::cout << std::string(5, ' ') << "0.0" << std::endl;
+    std::cout << std::string(8, ' ') << time << std::endl;
 
     sys_data.results["output"][cmethod]["iter"][std::to_string(iter + 1)] = {
       {"residual", residual}, {"correlation", energy}};
@@ -267,7 +255,12 @@ std::pair<double, double> rest(ExecutionContext& ec, const TiledIndexSpace& MO, 
   Scheduler sch{ec};
   // Tensor<T> d_r1_residual{}, d_r2_residual{};
   // Tensor<T>::allocate(&ec,d_r1_residual, d_r2_residual);
-  sch(d_r1_residual() = d_r1() * d_r1())(d_r2_residual() = d_r2() * d_r2()).execute();
+  // clang-format off
+  sch
+    (d_r1_residual() = d_r1()  * d_r1())
+    (d_r2_residual() = d_r2()  * d_r2())
+    .execute();
+  // clang-format on
 
   auto l0 = [&]() {
     T r1     = get_scalar(d_r1_residual);
@@ -300,7 +293,12 @@ rest_cs(ExecutionContext& ec, const TiledIndexSpace& MO, Tensor<T>& d_r1, Tensor
   Scheduler sch{ec};
   // Tensor<T> d_r1_residual{}, d_r2_residual{};
   // Tensor<T>::allocate(&ec,d_r1_residual, d_r2_residual);
-  sch(d_r1_residual() = d_r1() * d_r1())(d_r2_residual() = d_r2() * d_r2()).execute();
+  // clang-format off
+  sch
+    (d_r1_residual() = d_r1()  * d_r1())
+    (d_r2_residual() = d_r2()  * d_r2())
+    .execute();
+  // clang-format on
 
   auto l0 = [&]() {
     T r1     = get_scalar(d_r1_residual);
@@ -323,17 +321,18 @@ rest_cs(ExecutionContext& ec, const TiledIndexSpace& MO, Tensor<T>& d_r1, Tensor
   l2();
 
   // Tensor<T>::deallocate(d_r1_residual, d_r2_residual);
-
   return {residual, energy};
 }
 
-void print_ccsd_header(const bool do_print) {
+void print_ccsd_header(const bool do_print, std::string mname="") {
   if(do_print) {
+    if(mname.empty()) mname = "CCSD";
+    const auto mksp = std::string(10, ' ');
     std::cout << std::endl << std::endl;
-    std::cout << " CCSD iterations" << std::endl;
-    std::cout << std::string(66, '-') << std::endl;
-    std::cout << " Iter          Residuum       Correlation     Cpu    Wall    V2*C2" << std::endl;
-    std::cout << std::string(66, '-') << std::endl;
+    std::cout << " " << mname << " iterations" << std::endl;
+    std::cout << std::string(60, '-') << std::endl;
+    std::cout << "  Iter     Residuum" << mksp << "Correlation" << mksp << "Time(s)" << std::endl;
+    std::cout << std::string(60, '-') << std::endl;
   }
 }
 
@@ -342,7 +341,7 @@ std::tuple<std::vector<T>, Tensor<T>, Tensor<T>, Tensor<T>, Tensor<T>, std::vect
            std::vector<Tensor<T>>, std::vector<Tensor<T>>, std::vector<Tensor<T>>>
 setupTensors(ExecutionContext& ec, TiledIndexSpace& MO, Tensor<T> d_f1, int ndiis,
              bool ccsd_restart = false) {
-  auto rank = ec.pg().rank();
+  // auto rank = ec.pg().rank();
 
   TiledIndexSpace O = MO("occ");
   TiledIndexSpace V = MO("virt");
@@ -377,7 +376,12 @@ setupTensors(ExecutionContext& ec, TiledIndexSpace& MO, Tensor<T> d_f1, int ndii
 
   Tensor<T>::allocate(&ec, d_t1, d_t2);
 
-  Scheduler{ec}(d_t1() = 0)(d_t2() = 0).execute();
+  // clang-format off
+  Scheduler{ec}   
+  (d_t1() = 0)
+  (d_t2() = 0)
+  .execute();
+  // clang-format on
 
   return std::make_tuple(p_evl_sorted, d_t1, d_t2, d_r1, d_r2, d_r1s, d_r2s, d_t1s, d_t2s);
 }
@@ -387,7 +391,7 @@ std::tuple<std::vector<T>, Tensor<T>, Tensor<T>, Tensor<T>, Tensor<T>, std::vect
            std::vector<Tensor<T>>, std::vector<Tensor<T>>, std::vector<Tensor<T>>>
 setupTensors_cs(ExecutionContext& ec, TiledIndexSpace& MO, Tensor<T> d_f1, int ndiis,
                 bool ccsd_restart = false) {
-  auto rank = ec.pg().rank();
+  // auto rank = ec.pg().rank();
 
   const TiledIndexSpace& O = MO("occ");
   const TiledIndexSpace& V = MO("virt");
@@ -435,7 +439,12 @@ setupTensors_cs(ExecutionContext& ec, TiledIndexSpace& MO, Tensor<T> d_f1, int n
 
   Tensor<T>::allocate(&ec, d_t1, d_t2);
 
-  Scheduler{ec}(d_t1() = 0)(d_t2() = 0).execute();
+  // clang-format off
+  Scheduler{ec}   
+  (d_t1() = 0)
+  (d_t2() = 0)
+  .execute();
+  // clang-format on
 
   return std::make_tuple(p_evl_sorted, d_t1, d_t2, d_r1, d_r2, d_r1s, d_r2s, d_t1s, d_t2s);
 }
@@ -526,7 +535,7 @@ V2Tensors<T> setupV2Tensors(ExecutionContext& ec, Tensor<T> cholVpr, ExecutionHW
 
 template<typename T>
 Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI, Tensor<T> cholVpr,
-                  const tamm::Tile chol_count, ExecutionHW hw = ExecutionHW::CPU) {
+                  const tamm::Tile chol_count, ExecutionHW hw = ExecutionHW::CPU, bool anti_sym = true) {
   auto rank = ec.pg().rank();
 
   TiledIndexSpace N = MO("all");
@@ -535,22 +544,27 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
 
   // Spin here is defined as spin(p)=spin(r) and spin(q)=spin(s) which is not currently not
   // supported by TAMM.
-  // Tensor<T> d_a2{{N,N,N,N},{2,2}};
+  //  Tensor<T> d_a2{{N,N,N,N},{2,2}};
   // For V2, spin(p)+spin(q) == spin(r)+spin(s)
   Tensor<T> d_v2{{N, N, N, N}, {2, 2}};
   Tensor<T>::allocate(&ec, d_v2);
 
   auto cc_t1 = std::chrono::high_resolution_clock::now();
-
-  Scheduler{ec}(d_v2(p, q, r, s) = cholVpr(p, r, cindex) * cholVpr(q, s, cindex))(
-    d_v2(p, q, r, s) += -1.0 * cholVpr(p, s, cindex) * cholVpr(q, r, cindex))
-    .execute(hw);
+  // clang-format off
+  Scheduler sch{ec};
+  sch(d_v2(p, q, r, s)  = cholVpr(p, r, cindex) * cholVpr(q, s, cindex));
+  if(anti_sym)
+    sch(d_v2(p, q, r, s) += -1.0 * cholVpr(p, s, cindex) * cholVpr(q, r, cindex));
+  sch.execute(hw);
+  // clang-format on
 
   auto   cc_t2 = std::chrono::high_resolution_clock::now();
   double v2_time =
     std::chrono::duration_cast<std::chrono::duration<double>>((cc_t2 - cc_t1)).count();
   if(rank == 0)
-    std::cout << std::endl << "Time to reconstruct V2: " << v2_time << " secs" << std::endl;
+    std::cout << std::endl
+              << "Time to reconstruct V2: " << std::fixed << std::setprecision(2) << v2_time
+              << " secs" << std::endl;
 
   // Tensor<T>::deallocate(d_a2);
   return d_v2;
@@ -558,11 +572,11 @@ Tensor<T> setupV2(ExecutionContext& ec, TiledIndexSpace& MO, TiledIndexSpace& CI
 
 template<typename T>
 std::tuple<Tensor<T>, Tensor<T>, Tensor<T>, TAMM_SIZE, tamm::Tile, TiledIndexSpace>
-cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO,
+cd_svd_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO,
                  TiledIndexSpace& AO, Tensor<T> C_AO, Tensor<T> F_AO, Tensor<T> C_beta_AO,
                  Tensor<T> F_beta_AO, libint2::BasisSet& shells,
                  std::vector<size_t>& shell_tile_map, bool readv2 = false,
-                 std::string cholfile = "", bool is_dlpno = false) {
+                 std::string cholfile = "", bool is_dlpno = false, bool is_mso=true) {
   CDOptions cd_options        = sys_data.options_map.cd_options;
   auto      diagtol           = cd_options.diagtol; // tolerance for the max. diagonal
   cd_options.max_cvecs_factor = 2 * std::abs(std::log10(diagtol));
@@ -585,7 +599,7 @@ cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO
   // std::tie(V2) =
   Tensor<T> cholVpr;
 
-  auto itile_size = sys_data.options_map.ccsd_options.itilesize;
+  auto itile_size = sys_data.options_map.cd_options.itilesize;
 
   sys_data.n_frozen_core    = sys_data.options_map.ccsd_options.freeze_core;
   sys_data.n_frozen_virtual = sys_data.options_map.ccsd_options.freeze_virtual;
@@ -597,8 +611,8 @@ cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO
 
   if(!readv2) {
     two_index_transform(sys_data, ec, C_AO, F_AO, C_beta_AO, F_beta_AO, d_f1, shells, lcao,
-                        is_dlpno);
-    if(!is_dlpno) cholVpr = cd_svd_ga(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao);
+                        is_dlpno || !is_mso);
+    if(!is_dlpno) cholVpr = cd_svd(sys_data, ec, MO, AO, chol_count, max_cvecs, shells, lcao, is_mso);
     write_to_disk<TensorType>(lcao, lcaofile);
   }
   else {
@@ -612,7 +626,7 @@ cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO
 
     if(rank == 0) cout << "Number of cholesky vectors to be read = " << chol_count << endl;
 
-    if(!is_dlpno) update_sysdata(sys_data, MO);
+    if(!is_dlpno) update_sysdata(sys_data, MO, is_mso);
 
     IndexSpace      chol_is{range(0, chol_count)};
     TiledIndexSpace CI{chol_is, static_cast<tamm::Tile>(itile_size)};
@@ -630,7 +644,8 @@ cd_svd_ga_driver(SystemData& sys_data, ExecutionContext& ec, TiledIndexSpace& MO
 
   if(rank == 0)
     std::cout << std::endl
-              << "Total Time taken for CD (+SVD): " << cd_svd_time << " secs" << std::endl;
+              << "Total Time taken for Cholesky Decomposition: " << std::fixed
+              << std::setprecision(2) << cd_svd_time << " secs" << std::endl;
 
   Tensor<T>::deallocate(C_AO, F_AO);
   if(sys_data.is_unrestricted) Tensor<T>::deallocate(C_beta_AO, F_beta_AO);

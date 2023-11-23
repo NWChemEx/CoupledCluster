@@ -1,9 +1,11 @@
-#include "cc/property_types.hpp"
-#include "cc_modules.hpp"
-#include "ccsd_t/ccsd_t_fused_driver.hpp"
+// clang-format off
 #include "cd_ccsd_cs_ann.hpp"
+#include "cc_modules.hpp"
 #include <libint2.hpp>
 #include <simde/simde.hpp>
+#include "ccsd_t/ccsd_t_fused_driver.hpp"
+#include "cc/property_types.hpp"
+// clang-format on
 
 namespace ccsd {
 
@@ -89,8 +91,15 @@ TEMPLATED_MODULE_CTOR(CCSD, T) {
 
   add_input<bool>("debug").set_default(false).set_description("Debugging flag");
 
-  add_input<double>("diagtol").set_default(1.0e-6).set_description(
+  add_input<double>("diagtol").set_default(1.0e-5).set_description(
     "Cholesky Decomposition Threshold");
+
+  // write to disk after every count number of vectors are computed.
+  // enabled only if write_cv=true and nbf>1000
+  add_input<bool>("write_cv").set_default(false).set_description("write chol vecs to disk");
+  add_input<int>("write_vcount")
+    .set_default(5000)
+    .set_description("write to disk after every count number of vectors are computed");
 
   add_input<int>("max_cvecs_factor")
     .set_default(12)
@@ -201,8 +210,10 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
   // Check: Compute Northo
   sys_data.n_lindep = sys_data.nbf_orig - sys_data.n_occ_alpha - sys_data.n_vir_alpha;
   sys_data.nbf -= sys_data.n_lindep;
-
+  
   sys_data.options_map.cd_options.diagtol          = inputs.at("diagtol").value<double>();
+  sys_data.options_map.cd_options.write_cv         = inputs.at("write_cv").value<bool>();
+  sys_data.options_map.cd_options.write_vcount     = inputs.at("write_vcount").value<int>();
   sys_data.options_map.cd_options.max_cvecs_factor = inputs.at("max_cvecs_factor").value<int>();
   sys_data.options_map.ccsd_options.debug          = inputs.at("debug").value<bool>();
   sys_data.options_map.ccsd_options.printtol       = inputs.at("printtol").value<double>();
@@ -249,12 +260,20 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
 
   // Setup SCF data in TAMM
   const auto scf_conv = true;
+
+  std::vector<size_t>     shell_tile_map; //not used
+  std::vector<tamm::Tile> AO_tiles, AO_opttiles;
+
   auto       ao_ts    = static_cast<tamm::Tile>(std::ceil(sys_data.nbf_orig * 0.05));
   if(sys_data.AO_tilesize > ao_ts) ao_ts = sys_data.AO_tilesize;
-  TiledIndexSpace AO_opt{IndexSpace{range(0, (size_t) (sys_data.nbf))}, ao_ts};
+  else sys_data.AO_tilesize = ao_ts;
+
+  std::tie(shell_tile_map, AO_tiles, AO_opttiles) =
+    compute_AO_tiles(ec, sys_data, li_shells);
+  
+  TiledIndexSpace AO_opt{IndexSpace{range(0, (size_t) (sys_data.nbf))}, AO_opttiles};
   TiledIndexSpace AO_ortho{IndexSpace{range(0, (size_t) (sys_data.nbf_orig))}, ao_ts};
 
-  std::vector<size_t> shell_tile_map; // not used
   tamm::Tensor<T>     C_AO{AO_opt, AO_ortho}, F_AO{AO_opt, AO_opt};
   tamm::Tensor<T>     C_beta_AO{AO_opt, AO_ortho}, F_beta_AO{AO_opt, AO_opt}; // not used
   tamm::Tensor<T>::allocate(&ec, C_AO, F_AO);
@@ -297,7 +316,7 @@ TEMPLATED_MODULE_RUN(CCSD, T) {
                                               fs::exists(f1file) && fs::exists(v2file)));
 
   auto [cholVpr, d_f1_, lcao, chol_count, max_cvecs, CI] =
-    cd_svd_ga_driver<T>(sys_data, ec, MO, AO_opt, C_AO, F_AO, C_beta_AO, F_beta_AO, li_shells,
+    cd_svd_driver<T>(sys_data, ec, MO, AO_opt, C_AO, F_AO, C_beta_AO, F_beta_AO, li_shells,
                         shell_tile_map, ccsd_restart, cholfile);
 
   Tensor<T> d_f1 = d_f1_;

@@ -70,6 +70,7 @@ struct SystemData {
 
   // SCF
   int AO_tilesize{30};
+  int dfAO_tilesize{30};
 
   // json data
   json results;
@@ -214,4 +215,34 @@ void write_json_data(SystemData& sys_data, const std::string module) {
   // std::cout << std::endl << std::endl << results.dump() << std::endl;
   std::ofstream res_file(json_file);
   res_file << std::setw(2) << results << std::endl;
+}
+
+std::tuple<std::vector<size_t>, std::vector<Tile>, std::vector<Tile>>
+compute_AO_tiles(const ExecutionContext& ec, const SystemData& sys_data, libint2::BasisSet& shells,
+                 const bool is_df=false) {
+  auto rank      = ec.pg().rank();
+  int  tile_size = sys_data.AO_tilesize;
+  if(is_df) tile_size = sys_data.dfAO_tilesize;
+
+  std::vector<Tile> AO_tiles;
+  for(auto s: shells) AO_tiles.push_back(s.size());
+  // if(rank == 0) cout << "Number of AO tiles = " << AO_tiles.size() << endl;
+
+  tamm::Tile          est_ts = 0;
+  std::vector<Tile>   AO_opttiles;
+  std::vector<size_t> shell_tile_map;
+  for(size_t s = 0; s < shells.size(); s++) {
+    est_ts += shells[s].size();
+    if(est_ts >= (size_t) tile_size) {
+      AO_opttiles.push_back(est_ts);
+      shell_tile_map.push_back(s); // shell id specifying tile boundary
+      est_ts = 0;
+    }
+  }
+  if(est_ts > 0) {
+    AO_opttiles.push_back(est_ts);
+    shell_tile_map.push_back(shells.size() - 1);
+  }
+
+  return std::make_tuple(shell_tile_map, AO_tiles, AO_opttiles);
 }

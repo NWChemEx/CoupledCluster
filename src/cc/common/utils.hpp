@@ -93,22 +93,33 @@ class CDOptions: public Options {
 public:
   CDOptions() = default;
   CDOptions(Options o): Options(o) {
-    diagtol = 1e-6;
+    diagtol      = 1e-5;
+    write_cv     = false;
+    write_vcount = 5000;
     // At most 8*ao CholVec's. For vast majority cases, this is way
     // more than enough. For very large basis, it can be increased.
     max_cvecs_factor = 12;
+    itilesize        = 1000;
   }
 
   double diagtol;
+  int    itilesize;
   int    max_cvecs_factor;
+  // write to disk after every count number of vectors are computed.
+  // enabled only if write_cv=true and nbf>1000
+  bool write_cv;
+  int  write_vcount;
 
   void print() {
     std::cout << std::defaultfloat;
     cout << endl << "CD Options" << endl;
     cout << "{" << endl;
-    cout << " diagtol          = " << std::scientific << std::setprecision(2) << diagtol << endl;
+    cout << std::boolalpha << " debug            = " << debug << endl;
+    cout << std::boolalpha << " write_cv         = " << write_cv << endl;
+    cout << " diagtol          = " << diagtol << endl;
+    cout << " write_vcount     = " << write_vcount << endl;
+    cout << " itilesize        = " << itilesize << endl;
     cout << " max_cvecs_factor = " << max_cvecs_factor << endl;
-    print_bool(" debug           ", debug);
     cout << "}" << endl;
   }
 };
