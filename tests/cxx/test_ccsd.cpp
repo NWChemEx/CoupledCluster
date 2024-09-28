@@ -14,7 +14,18 @@
  * limitations under the License.
  */
 
-#pragma once
-#include "cc/cc_mm.hpp"
-#include <simde/simde.hpp>
-#include "cc/property_types.hpp"
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <chemcache/chemcache.hpp>
+#include <iostream>
+#include "cc/cc.hpp"
+
+using namespace mokup;
+
+using pt     = simde::CanonicalCorrelationEnergy;
+using eri_pt = simde::TransformedERI4;
+
+TEST_CASE("CCSD") { 
+    std::cout << "TBD: Canonical CCSD Test" << std::endl; 
+}

@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-#pragma once
-#include "cc/cc_mm.hpp"
-#include <simde/simde.hpp>
-#include "cc/property_types.hpp"
+#define CATCH_CONFIG_RUNNER
+#include <catch2/catch_session.hpp>
+#include <tamm/tamm.hpp>
+
+int main(int argc, char* argv[]) {
+    tamm::initialize(argc, argv);
+
+    int res = Catch::Session().run(argc, argv);
+
+    tamm::finalize();
+
+    return res;
+}

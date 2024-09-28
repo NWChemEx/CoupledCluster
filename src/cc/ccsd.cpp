@@ -19,7 +19,7 @@ using ce_pt =
 using ccsd_pt = coupledcluster::CorrelationEnergy<simde::type::canonical_reference,
                                                   simde::type::canonical_reference>;
 
-inline libint2::BasisSet ccsd_make_basis(const simde::type::ao_basis_set& bs) {
+inline libint2::BasisSet make_libint_basis(const simde::type::ao_basis_set& bs) {
   /// Typedefs for everything
   using atom_t          = libint2::Atom;
   using shell_t         = libint2::Shell;

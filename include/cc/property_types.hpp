@@ -1,6 +1,6 @@
 #pragma once
 #include "simde/simde.hpp"
-#include "tamm/tamm.hpp"
+#include <tamm/tamm.hpp>
 
 namespace coupledcluster {
 

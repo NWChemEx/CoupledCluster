@@ -61,7 +61,7 @@ cmaize_find_or_build_dependency(
     VERSION main
     BUILD_TARGET tamm
     FIND_TARGET tamm::tamm
-    CMAKE_ARGS MODULES="CC;DFT"
+    CMAKE_ARGS MODULES="CC"
 )
 list(APPEND DEPENDENCIES tamm)
 
@@ -71,7 +71,7 @@ cmaize_find_or_build_dependency(
     VERSION main
     BUILD_TARGET exachem
     FIND_TARGET exachem::exachem
-    CMAKE_ARGS MODULES="CC;DFT"
+    CMAKE_ARGS MODULES="CC"
 )
 list(APPEND DEPENDENCIES exachem)
 
@@ -108,7 +108,7 @@ cmaize_find_or_build_dependency(
 )
 
 cmaize_add_executable(
-    cc_driver
+    ccsd_driver
     SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/examples/driver"
     DEPENDS coupledcluster chemcache
 )
@@ -128,22 +128,22 @@ if("${BUILD_TESTING}")
         VERSION v3.6.0
     )
     cmaize_add_executable(
-        test_coupledcluster
+        test_ccsd
         SOURCE_DIR "${CXX_TEST_DIR}"
         INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/src/cc"
         DEPENDS Catch2 coupledcluster chemcache
     )
     add_test(
-        NAME "test_coupledcluster"
+        NAME "test_ccsd"
         COMMAND "${MPIEXEC_EXECUTABLE}" "${MPIEXEC_NUMPROC_FLAG}" "2"
-                "${CMAKE_BINARY_DIR}/test_coupledcluster"
+                "${CMAKE_BINARY_DIR}/test_ccsd"
     )
 
     add_test(
         NAME py_test_unit_${PROJECT_NAME}
         COMMAND "${MPIEXEC_EXECUTABLE}" "${MPIEXEC_NUMPROC_FLAG}" "2"
                 "${Python_EXECUTABLE}" 
-                "${PYTHON_TEST_DIR}/unit_tests/test_coupledcluster.py"
+                "${PYTHON_TEST_DIR}/unit_tests/test_ccsd.py"
     )
     nwx_python_path(
         TEST_PYTHONPATH
