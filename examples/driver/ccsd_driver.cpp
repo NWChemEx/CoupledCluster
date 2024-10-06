@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     // Populate modules
     pluginplay::ModuleManager mm;
     chemcache::load_modules(mm);
-    scf::load_modules(mm);
+    cc::load_modules(mm);
 
     // Create ChemicalSystem
     std::string mol_name = "water";
@@ -39,15 +39,9 @@ int main(int argc, char** argv) {
     auto aos = mm.at(basis_name).run_as<simde::MolecularBasisSet>(mol);
 
     // Run module
-    // auto E = mm.at("SCF Energy").run_as<simde::AOEnergy>(aos, cs);
-    // std::cout << "SCF Energy = " << E << " Hartree" << std::endl;
+    auto E = mm.at("CCSD Energy").run_as<simde::AOEnergy>(aos, cs);
+    std::cout << "CCSD Energy = " << E << " Hartree" << std::endl;
     
-    // std::vector<std::string> xc_type = {"pbe0"};
-    // mm.change_input("SCF Energy", "xc_type", xc_type);
-    // mm.change_input("SCF Energy", "molecule_name", mol_name);
-    // E = mm.at("SCF Energy").run_as<simde::AOEnergy>(aos, cs);
-    // std::cout << "SCF Energy = " << E << " Hartree" << std::endl;
-        
     tamm::finalize();
     
     return 0;

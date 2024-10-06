@@ -21,11 +21,30 @@
 #include <iostream>
 #include "cc/cc.hpp"
 
-using namespace mokup;
-
-using pt     = simde::CanonicalCorrelationEnergy;
-using eri_pt = simde::TransformedERI4;
+// using namespace mokup;
+// using pt     = simde::CanonicalCorrelationEnergy;
+// using eri_pt = simde::TransformedERI4;
 
 TEST_CASE("CCSD") { 
     std::cout << "TBD: Canonical CCSD Test" << std::endl; 
+    // Populate modules
+    pluginplay::ModuleManager mm;
+    chemcache::load_modules(mm);
+    cc::load_modules(mm);
+
+    // Create ChemicalSystem
+    std::string mol_name = "water";
+    auto mol = mm.at("NWX Molecules").run_as<simde::MoleculeFromString>(mol_name);
+    simde::type::chemical_system cs(mol);
+
+    // Create BasisSet
+    std::string basis_name = "sto-3g"; // This is the only supported basis in ChemCache
+    auto aos = mm.at(basis_name).run_as<simde::MolecularBasisSet>(mol);
+
+    // Run module
+    mm.change_input("CCSD Energy", "molecule_name", mol_name);
+    auto E = mm.at("CCSD Energy").run_as<simde::AOEnergy>(aos, cs);
+    std::cout << "CCSD Energy = " << E << " Hartree" << std::endl;
+    
+    REQUIRE(E == Catch::Approx(-74.3670617803483).margin(1.0e-6));    
 }

@@ -19,7 +19,7 @@
 #include <pybind11/pybind11.h>
 #include <tamm/tamm.hpp>
 
-namespace ccsd {
+namespace cc {
 
 EXPORT_PLUGIN(scf, m) {
     m.def("tamm_initialize", [](pybind11::list py_args) {
@@ -39,4 +39,4 @@ EXPORT_PLUGIN(scf, m) {
     });
 }
 
-} // namespace ccsd
+} // namespace cc

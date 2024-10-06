@@ -17,4 +17,4 @@
 #pragma once
 #include "cc/cc_mm.hpp"
 #include <simde/simde.hpp>
-#include "cc/property_types.hpp"
+// #include "cc/property_types.hpp"

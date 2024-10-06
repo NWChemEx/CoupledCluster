@@ -1,8 +1,11 @@
 #include "cc/cc_mm.hpp"
 #include "cc_modules.hpp"
 
-namespace ccsd {
+namespace cc {
 
-void load_modules(pluginplay::ModuleManager& mm) { ccsd::load_modules<double>(mm); }
+void load_modules(pluginplay::ModuleManager& mm) { 
+    // cc::load_modules<double>(mm); 
+    mm.add_module<CCSDEnergy>("CCSD Energy");
+}
 
-} // namespace ccsd
+} // namespace cc

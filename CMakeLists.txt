@@ -46,14 +46,24 @@ cmaize_option_list(
     ENABLE_EXPERIMENTAL_FEATURES OFF "Build features which are not 1.0-ed yet?"
 )
 
+# cmaize_find_or_build_dependency(
+#     scf
+#     URL github.com/NWChemEx/SCF
+#     BUILD_TARGET scf
+#     FIND_TARGET nwx::scf
+#     CMAKE_ARGS BUILD_TESTING=OFF
+# )
+# list(APPEND DEPENDENCIES scf)
+
 cmaize_find_or_build_dependency(
-    scf
-    URL github.com/NWChemEx/SCF
-    BUILD_TARGET scf
-    FIND_TARGET nwx::scf
+    simde
+    URL github.com/NWChemEx/SimDE
+    BUILD_TARGET simde
+    FIND_TARGET nwx::simde
     CMAKE_ARGS BUILD_TESTING=OFF
+               BUILD_PYBIND11_PYBINDINGS=${BUILD_PYBIND11_PYBINDINGS}
 )
-list(APPEND DEPENDENCIES scf)
+list(APPEND DEPENDENCIES simde)
 
 cmaize_find_or_build_dependency(
     tamm

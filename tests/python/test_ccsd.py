@@ -35,7 +35,7 @@ class TestSCF(unittest.TestCase):
         basis_name = "sto-3g"
         aos = self.mm.run_as(MolecularBasisSet(), basis_name, mol)
 
-        # key = 'SCF Energy'
+        # key = 'CCSD Energy'
         # self.mm.change_input(key, 'molecule_name', mol_name)
         # egy = self.mm.run_as(AOEnergy(), key, aos, cs)
         # self.assertAlmostEqual(egy, -74.3670617803483, places=6)
