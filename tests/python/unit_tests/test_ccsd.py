@@ -25,7 +25,7 @@ import os
 import sys
 
 
-class TestSCF(unittest.TestCase):
+class TestCCSD(unittest.TestCase):
 
     def test_ccsd(self):
         mol_name = "water"

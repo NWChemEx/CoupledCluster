@@ -16,7 +16,7 @@
 
 #include <iostream>
 
-#include <cc/cc.hpp>
+#include <coupledcluster/coupledcluster.hpp>
 #include <chemcache/chemcache.hpp>
 #include <tamm/tamm.hpp>
 
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     // Populate modules
     pluginplay::ModuleManager mm;
     chemcache::load_modules(mm);
-    cc::load_modules(mm);
+    coupledcluster::load_modules(mm);
 
     // Create ChemicalSystem
     std::string mol_name = "water";

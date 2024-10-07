@@ -15,6 +15,6 @@
  */
 
 #pragma once
-#include "cc/cc_mm.hpp"
+#include "coupledcluster/coupledcluster_mm.hpp"
 #include <simde/simde.hpp>
-// #include "cc/property_types.hpp"
+// #include "coupledcluster/property_types.hpp"

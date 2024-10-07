@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include <cc/cc.hpp>
+#include <coupledcluster/coupledcluster.hpp>
 #include <pluginplay/plugin/plugin.hpp>
 #include <pybind11/pybind11.h>
 #include <tamm/tamm.hpp>
 
-namespace cc {
+namespace coupledcluster {
 
-EXPORT_PLUGIN(cc, m) {
+EXPORT_PLUGIN(coupledcluster, m) {
     m.def("tamm_initialize", [](pybind11::list py_args) {
         std::vector<std::string> args;
         for (const auto& arg : py_args) 
@@ -39,4 +39,4 @@ EXPORT_PLUGIN(cc, m) {
     });
 }
 
-} // namespace cc
+} // namespace coupledcluster

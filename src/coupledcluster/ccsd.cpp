@@ -1,6 +1,6 @@
 // clang-format off
 
-#include "cc_modules.hpp"
+#include "coupledcluster_modules.hpp"
 #include <libint2.hpp>
 #include <simde/simde.hpp>
 #include "exachem/common/chemenv.hpp"
@@ -11,7 +11,7 @@
 
 // clang-format on
 
-namespace cc {
+namespace coupledcluster {
 
 using energy_pt = simde::AOEnergy;
 
@@ -351,4 +351,4 @@ MODULE_RUN(CCSDEnergy) {
 // Instantiations
 // template class CCSD<double>;
 
-} // namespace cc
+} // namespace coupledcluster

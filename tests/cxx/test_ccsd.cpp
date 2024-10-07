@@ -19,7 +19,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chemcache/chemcache.hpp>
 #include <iostream>
-#include "cc/cc.hpp"
+#include "coupledcluster/coupledcluster.hpp"
 
 // using namespace mokup;
 // using pt     = simde::CanonicalCorrelationEnergy;
@@ -29,7 +29,7 @@ TEST_CASE("CCSD") {
     // Populate modules
     pluginplay::ModuleManager mm;
     chemcache::load_modules(mm);
-    cc::load_modules(mm);
+    coupledcluster::load_modules(mm);
 
     // Create ChemicalSystem
     std::string mol_name = "water";

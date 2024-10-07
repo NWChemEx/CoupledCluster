@@ -96,8 +96,8 @@ list(APPEND DEPENDENCIES Libint2)
 
 cmaize_add_library(
     coupledcluster
-    SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src/cc"
-    INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/include/cc"
+    SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src/coupledcluster"
+    INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/include/coupledcluster"
     DEPENDS "${DEPENDENCIES}"
 )
 
@@ -140,7 +140,7 @@ if("${BUILD_TESTING}")
     cmaize_add_executable(
         test_ccsd
         SOURCE_DIR "${CXX_TEST_DIR}"
-        INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/src/cc"
+        INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/src/coupledcluster"
         DEPENDS Catch2 coupledcluster chemcache
     )
     add_test(

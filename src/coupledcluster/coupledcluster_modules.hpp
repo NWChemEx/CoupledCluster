@@ -1,7 +1,7 @@
 #pragma once
 #include <pluginplay/pluginplay.hpp>
 
-namespace cc {
+namespace coupledcluster {
 
 // template<typename T>
 DECLARE_MODULE(CCSDEnergy);
@@ -18,4 +18,4 @@ DECLARE_MODULE(CCSDEnergy);
 
 // extern template class CCSD<double>;
 
-} // namespace cc
+} // namespace coupledcluster
