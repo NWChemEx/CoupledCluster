@@ -7,7 +7,7 @@
 #include "exachem/scf/scf_main.hpp"
 #include "exachem/common/initialize_system_data.hpp"
 #include "exachem/cc/ccsd/cd_ccsd_os_ann.hpp"
-// #include "exachem/cc/ccsd_t/ccsd_t_fused_driver.hpp"
+#include "exachem/cc/ccsd_t/ccsd_t_fused_driver.hpp"
 
 // clang-format on
 
@@ -79,38 +79,96 @@ MODULE_CTOR(CCSDEnergy) {
   // add_submodule<eri_pt>("Transformed ERIs");
   // add_submodule<ee_pt>("Electronic Energy");
 
-  add_input<bool>("debug").set_default(false).set_description("Debugging flag");
+  // BEGIN SCF options
+
+  add_input<std::string>("molecule_name").set_description("The name of the molecule");
+  add_input<std::string>("units").set_default("angstrom").set_description("Specifies the units as bohr or angstrom");
+
+  add_input<int>("charge").set_default(0).set_description("Charge");
+  add_input<int>("multiplicity").set_default(1).set_description("number of singly occupied orbitals for a particular calculation");
+  add_input<double>("lshift").set_default(0.0).set_description("level shift factor denoting the amount of shift applied to the diagonal elements of the unoccupied block of the Fock matrix");
+
+  add_input<double>("tol_int").set_default(1e-22).set_description("integral primitive screening threshold");
+
+  add_input<double>("tol_sch").set_default(1.0e-10).set_description(
+    "The Schwarz inequality is used to screen the product of integrals and density matrices");
+
+  add_input<double>("tol_lindep").set_default(1e-5).set_description("Tolerance for detecting the linear dependence of basis set");
+
+  add_input<double>("conve").set_default(1e-8).set_description("Specifies the energy convergence threshold");
+  add_input<double>("convd").set_default(1e-6).set_description("Specifies the density convergence threshold");
+
+  add_input<int>("diis_hist").set_default(10).set_description("number of DIIS history entries to store for the fock and error matrices");
+
+  add_input<int>("damp").set_default(100).set_description("percentage of the current iterations density mixed with the previous iterations density. 100\% indicates no damping");
+
+  add_input<int>("writem").set_default(1).set_description("An integer specifying the frequency (as number of iterations) after which the movecs and density matrices are written to disk for restarting the calculation");
+
+  add_input<bool>("debug").set_default(false).set_description("enable verbose printing for debugging a calculation");
+
+  add_input<bool>("restart").set_default(false).set_description("indicates the calculation be restarted");
+  add_input<bool>("noscf").set_default(false).set_description("computes only the SCF energy upon restart");
+
+  add_input<std::string>("scf_type").set_default("restricted").set_description("options supported are restricted and unrestricted");
+  add_input<bool>("direct_df").set_default(false).set_description("Requests the direct computation of the density-fitted Coulomb contribution. Works only for pure Kohn-Sham fnctionals (no exact exchange) ");
+
+  //DFT
+  add_input<bool>("snK").set_default(false).set_description("Computes the exact exchange contribution using the seminumerical approach implemented in GauXC");
+  add_input<std::vector<std::string>>("xc_type").set_default(std::vector<std::string>{}).set_description("A list of strings specifying the exchange and correlation functionals for DFT calculations");
+
+  add_input<std::string>("xc_grid_type").set_default("UltraFine").set_description("Specifies the quality of the numerical integration grid");
+
+  add_input<std::string>("xc_pruning_scheme").set_default("Robust").set_description("GauXC pruning scheme. Options supported are Robust, Treutler, Unpruned");
+  add_input<std::string>("xc_rad_quad").set_default("MK").set_description("Specifies the GauXC radial quadrature. Options are MK,TA,MHL");
+  add_input<std::string>("xc_weight_scheme").set_default("SSF").set_description("Specifies the GauXC partitioning scheme. Can be SSF, Becke, LKO");
+  add_input<std::string>("xc_exec_space").set_default("Host").set_description("Specifies the GauXC execution space (Host or Device) for the load balancer and integrator");
+
+  add_input<double>("xc_basis_tol").set_default(1e-10).set_description("Specifies the GauXC basis tolerance");
+  add_input<int>("xc_batch_size").set_default(2048).set_description("Specifies the GauXC batch size");
+
+  add_input<double>("xc_snK_etol").set_default(1e-10).set_description("snK energy tolerance. If conve < xc_snK_etol, this tolerance will be automatically set to the conve value");
+  add_input<double>("xc_snK_ktol").set_default(1e-10).set_description("K matrix tolerance. If conve * 1e-2 < xc_snK_ktol, this tolerance will be automatically set to conve * 1e-2");
+
+  add_input<std::string>("xc_lb_kernel" ).set_default("Default").set_description("Specifies the GauXC Load Balancer Kernel");
+  add_input<std::string>("xc_mw_kernel" ).set_default("Default").set_description("Specifies the GauXC Molecular Weights Kernel");
+  add_input<std::string>("xc_int_kernel").set_default("Default").set_description("Specifies the GauXC Integrator Kernel");
+  add_input<std::string>("xc_red_kernel").set_default("Default").set_description("Specifies the GauXC Reduction Kernel");
+  add_input<std::string>("xc_lwd_kernel").set_default("Default").set_description("Specifies the GauXC Local Work Driver Kernel");
+
+  // END SCF options
+
+  // Cholesky options
 
   add_input<double>("diagtol").set_default(1.0e-5).set_description(
     "Cholesky Decomposition Threshold");
 
   // write to disk after every count number of vectors are computed.
   // enabled only if write_cv=true and nbf>1000
-  add_input<bool>("write_cv").set_default(false).set_description("write chol vecs to disk");
-  add_input<int>("write_vcount")
-    .set_default(5000)
-    .set_description("write to disk after every count number of vectors are computed");
+  // add_input<bool>("write_cv").set_default(false).set_description("write chol vecs to disk");
+  // add_input<int>("write_vcount")
+  //   .set_default(5000)
+  //   .set_description("write to disk after every count number of vectors are computed");
+  // add_input<int>("max_cvecs_factor")
+  //   .set_default(12)
+  //   .set_description("Limit Max. number of cholesky vectors to 12*N");
+  // add_input<int>("itilesize")
+  //   .set_default(1000)
+  //   .set_description("Tilesize for the Cholesky Dimension");
 
-  add_input<int>("max_cvecs_factor")
-    .set_default(12)
-    .set_description("Limit Max. number of cholesky vectors to 12*N");
+  // CCSD(T) options
+  add_input<bool>("debug").set_default(false).set_description("Debugging flag");
 
-  add_input<double>("printtol")
-    .set_default(0.05)
-    .set_description("Write T1,T2 amplitudes above a certain threshold to a file");
+  // add_input<double>("printtol")
+  //   .set_default(0.05)
+  //   .set_description("Write T1,T2 amplitudes above a certain threshold to a file");
 
   add_input<double>("threshold").set_default(1.0e-6).set_description("CCSD Threshold");
 
   add_input<int>("tilesize")
-    .set_default(50)
-    .set_description("Tilesize for the MO space. Will be reset automatically "
-                     "based on MO size");
+    .set_default(40)
+    .set_description("Tilesize for the MO space. Will be reset automatically based on MO size");
 
   add_input<bool>("force_tilesize").set_default(false).set_description("Force tilesize specified");
-
-  add_input<int>("itilesize")
-    .set_default(1000)
-    .set_description("Tilesize for the Cholesky Dimension");
 
   add_input<int>("ndiis").set_default(5).set_description("number of diis entries");
 
@@ -147,12 +205,12 @@ MODULE_CTOR(CCSDEnergy) {
     "Read Fock, 2e integral, T1, T2 amplitude tensors to disk. Not required "
     "when writet=true");
 
-  add_input<bool>("writev").set_default(false).set_description(
-    "Write the 4D 2e integral tensor to disk");
+  // add_input<bool>("writev").set_default(false).set_description(
+  //   "Write the 4D 2e integral tensor to disk");
 
-  add_input<bool>("computeTData")
-    .set_default(true)
-    .set_description("Compute and write data needed for (T) calculation to disk");
+  // add_input<bool>("computeTData")
+  //   .set_default(true)
+  //   .set_description("Compute and write data needed for (T) calculation to disk");
 
   add_input<int>("cache_size").set_default(8).set_description("cache size for (T)");
   add_input<int>("ccsdt_tilesize").set_default(32).set_description("MO tilesize for (T)");
@@ -255,36 +313,35 @@ MODULE_RUN(CCSDEnergy) {
     chem_env.shells           = chem_env.ec_basis.shells;
     chem_env.sys_data.has_ecp = chem_env.ec_basis.has_ecp;
 
-  // sys_data.options_map.cd_options.diagtol          = inputs.at("diagtol").value<double>();
-  // sys_data.options_map.cd_options.itilesize        = inputs.at("itilesize").value<int>();
-  // sys_data.options_map.cd_options.write_cv         = inputs.at("write_cv").value<bool>();
-  // sys_data.options_map.cd_options.write_vcount     = inputs.at("write_vcount").value<int>();
-  // sys_data.options_map.cd_options.max_cvecs_factor = inputs.at("max_cvecs_factor").value<int>();
-  // sys_data.options_map.ccsd_options.debug          = inputs.at("debug").value<bool>();
-  // sys_data.options_map.ccsd_options.printtol       = inputs.at("printtol").value<double>();
-  // sys_data.options_map.ccsd_options.threshold      = inputs.at("threshold").value<double>();
-  // sys_data.options_map.ccsd_options.force_tilesize = inputs.at("force_tilesize").value<bool>();
-  // sys_data.options_map.ccsd_options.tilesize       = inputs.at("tilesize").value<int>();
-  // sys_data.options_map.ccsd_options.ndiis          = inputs.at("ndiis").value<int>();
-  // sys_data.options_map.ccsd_options.lshift         = inputs.at("lshift").value<double>();
-  // sys_data.options_map.ccsd_options.ccsd_maxiter   = inputs.at("ccsd_maxiter").value<int>();
-  // sys_data.options_map.ccsd_options.freeze_core    = inputs.at("freeze_core").value<int>();
-  // sys_data.options_map.ccsd_options.freeze_virtual = inputs.at("freeze_virtual").value<int>();
-  // sys_data.options_map.ccsd_options.balance_tiles  = inputs.at("balance_tiles").value<bool>();
-  // sys_data.options_map.ccsd_options.profile_ccsd   = inputs.at("profile_ccsd").value<bool>();
-  // sys_data.options_map.ccsd_options.writet         = inputs.at("writet").value<bool>();
-  // sys_data.options_map.ccsd_options.writev         = inputs.at("writev").value<bool>();
-  // sys_data.options_map.ccsd_options.writet_iter    = inputs.at("writet_iter").value<int>();
-  // sys_data.options_map.ccsd_options.readt          = inputs.at("readt").value<bool>();
-  // sys_data.options_map.ccsd_options.computeTData   = inputs.at("computeTData").value<bool>();
+  // Set cholesky options
+  CDOptions& cd_options = chem_env.ioptions.cd_options;
+  cd_options.diagtol          = inputs.at("diagtol").value<double>();
 
-  // sys_data.options_map.ccsd_options.cache_size     = inputs.at("cache_size").value<int>();
-  // sys_data.options_map.ccsd_options.ccsdt_tilesize = inputs.at("ccsdt_tilesize").value<int>();
+  CCSDOptions& ccsd_options = chem_env.ioptions.ccsd_options;
+  ccsd_options.debug          = inputs.at("debug").value<bool>();
+  // ccsd_options.printtol       = inputs.at("printtol").value<double>();
+  ccsd_options.threshold      = inputs.at("threshold").value<double>();
+  ccsd_options.force_tilesize = inputs.at("force_tilesize").value<bool>();
+  ccsd_options.tilesize       = inputs.at("tilesize").value<int>();
+  ccsd_options.ndiis          = inputs.at("ndiis").value<int>();
+  ccsd_options.lshift         = inputs.at("lshift").value<double>();
+  ccsd_options.ccsd_maxiter   = inputs.at("ccsd_maxiter").value<int>();
+  ccsd_options.freeze_core    = inputs.at("freeze_core").value<int>();
+  ccsd_options.freeze_virtual = inputs.at("freeze_virtual").value<int>();
+  ccsd_options.balance_tiles  = inputs.at("balance_tiles").value<bool>();
+  ccsd_options.profile_ccsd   = inputs.at("profile_ccsd").value<bool>();
+  ccsd_options.writet         = inputs.at("writet").value<bool>();
+  ccsd_options.writet_iter    = inputs.at("writet_iter").value<int>();
+  ccsd_options.readt          = inputs.at("readt").value<bool>();
+
+  ccsd_options.cache_size     = inputs.at("cache_size").value<int>();
+  ccsd_options.ccsdt_tilesize = inputs.at("ccsdt_tilesize").value<int>();
 
   // exachem::scf::scf(ec, chem_env);
-  exachem::cc::ccsd::cd_ccsd(ec, chem_env);
+  exachem::cc::ccsd_t::ccsd_t_driver(ec, chem_env);
 
-  double E0 = chem_env.hf_energy; // This is a total energy in Hartree
+  // This is a total energy in Hartree
+  double E0 = chem_env.hf_energy; //FIX: get ccsd energy
   auto rv = results();
   return energy_pt::wrap_results(rv, E0);
 

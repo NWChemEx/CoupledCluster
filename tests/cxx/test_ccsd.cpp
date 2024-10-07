@@ -26,7 +26,6 @@
 // using eri_pt = simde::TransformedERI4;
 
 TEST_CASE("CCSD") { 
-    std::cout << "TBD: Canonical CCSD Test" << std::endl; 
     // Populate modules
     pluginplay::ModuleManager mm;
     chemcache::load_modules(mm);

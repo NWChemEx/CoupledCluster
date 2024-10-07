@@ -21,7 +21,7 @@
 
 namespace cc {
 
-EXPORT_PLUGIN(scf, m) {
+EXPORT_PLUGIN(cc, m) {
     m.def("tamm_initialize", [](pybind11::list py_args) {
         std::vector<std::string> args;
         for (const auto& arg : py_args) 

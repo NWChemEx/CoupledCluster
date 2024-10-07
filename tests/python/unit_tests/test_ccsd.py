@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from pluginplay import ModuleManager
-from cc import load_modules, tamm_finalize, tamm_initialize
+from coupledcluster import load_modules, tamm_finalize, tamm_initialize
 from simde import AOEnergy, MoleculeFromString, MolecularBasisSet
 import chemcache as ccache
 from molecules import make_h2
@@ -35,10 +35,10 @@ class TestSCF(unittest.TestCase):
         basis_name = "sto-3g"
         aos = self.mm.run_as(MolecularBasisSet(), basis_name, mol)
 
-        # key = 'CCSD Energy'
-        # self.mm.change_input(key, 'molecule_name', mol_name)
-        # egy = self.mm.run_as(AOEnergy(), key, aos, cs)
-        # self.assertAlmostEqual(egy, -74.3670617803483, places=6)
+        key = 'CCSD Energy'
+        self.mm.change_input(key, 'molecule_name', mol_name)
+        egy = self.mm.run_as(AOEnergy(), key, aos, cs)
+        self.assertAlmostEqual(egy, -74.3670617803483, places=6)
 
     def setUp(self):
         self.mm = ModuleManager()

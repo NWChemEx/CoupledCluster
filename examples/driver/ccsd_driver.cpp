@@ -34,6 +34,8 @@ int main(int argc, char** argv) {
     auto mol = mm.at("NWX Molecules").run_as<simde::MoleculeFromString>(mol_name);
     simde::type::chemical_system cs(mol);
 
+    mm.change_input("CCSD Energy", "molecule_name", mol_name);
+
     // Create BasisSet
     std::string basis_name = "sto-3g"; // This is the only supported basis in ChemCache
     auto aos = mm.at(basis_name).run_as<simde::MolecularBasisSet>(mol);
