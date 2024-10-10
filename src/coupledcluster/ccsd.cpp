@@ -340,8 +340,8 @@ MODULE_RUN(CCSDEnergy) {
   // exachem::scf::scf(ec, chem_env);
   exachem::cc::ccsd_t::ccsd_t_driver(ec, chem_env);
 
-  // This is a total energy in Hartree
-  double E0 = chem_env.hf_energy; //FIX: get ccsd energy
+  // This is the total CCSD energy in Hartree
+  double E0 = chem_env.cc_context.ccsd_total_energy;
   auto rv = results();
   return energy_pt::wrap_results(rv, E0);
 

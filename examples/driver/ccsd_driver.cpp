@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
     // Run module
     auto E = mm.at("CCSD Energy").run_as<simde::AOEnergy>(aos, cs);
-    std::cout << "CCSD Energy = " << E << " Hartree" << std::endl;
+    std::cout << std::endl << "CCSD Energy = " << std::fixed << std::setprecision(12) << E << " Hartree" << std::endl;
     
     tamm::finalize();
     

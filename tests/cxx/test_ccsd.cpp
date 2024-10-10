@@ -43,7 +43,7 @@ TEST_CASE("CCSD") {
     // Run module
     mm.change_input("CCSD Energy", "molecule_name", mol_name);
     auto E = mm.at("CCSD Energy").run_as<simde::AOEnergy>(aos, cs);
-    std::cout << "CCSD Energy = " << E << " Hartree" << std::endl;
+    std::cout << std::endl << "CCSD Energy = " << std::fixed << std::setprecision(12) << E << " Hartree" << std::endl;
     
-    REQUIRE(E == Catch::Approx(-74.3670617803483).margin(1.0e-6));    
+    REQUIRE(E == Catch::Approx(-74.742569787866302).margin(1.0e-6));    
 }
