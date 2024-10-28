@@ -24,5 +24,6 @@ header:
     - src/scf/common/
     - src/scf/scf/
     - LICENSE
+    - DISCLAIMER
 
   comment: never
