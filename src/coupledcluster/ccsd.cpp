@@ -182,9 +182,7 @@ MODULE_CTOR(CCSDEnergy) {
 
   add_input<int>("tilesize")
     .set_default(40)
-    .set_description("Tilesize for the MO space. Will be reset automatically based on MO size");
-
-  add_input<bool>("force_tilesize").set_default(false).set_description("Force tilesize specified");
+    .set_description("Tilesize for the MO space. Will be set automatically unless explicitly specified");
 
   add_input<int>("ndiis").set_default(5).set_description("number of diis entries");
 
@@ -337,7 +335,6 @@ MODULE_RUN(CCSDEnergy) {
   ccsd_options.debug          = inputs.at("debug").value<bool>();
   // ccsd_options.printtol       = inputs.at("printtol").value<double>();
   ccsd_options.threshold      = inputs.at("threshold").value<double>();
-  ccsd_options.force_tilesize = inputs.at("force_tilesize").value<bool>();
   ccsd_options.tilesize       = inputs.at("tilesize").value<int>();
   ccsd_options.ndiis          = inputs.at("ndiis").value<int>();
   ccsd_options.lshift         = inputs.at("lshift").value<double>();
@@ -353,8 +350,10 @@ MODULE_RUN(CCSDEnergy) {
   ccsd_options.cache_size     = inputs.at("cache_size").value<int>();
   ccsd_options.ccsdt_tilesize = inputs.at("ccsdt_tilesize").value<int>();
 
+  chem_env.read_run_context();
   // exachem::scf::scf(ec, chem_env);
   exachem::cc::ccsd_t::ccsd_t_driver(ec, chem_env);
+  chem_env.write_run_context();
 
   // This is the total CCSD energy in Hartree
   double E0 = chem_env.cc_context.ccsd_total_energy;
