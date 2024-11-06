@@ -1,4 +1,4 @@
-# Copyright 2024 NWChemEx-Project
+# Copyright 2023 NWChemEx-Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,30 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#These are configuration files for QtCreator
-TAMM.config
-TAMM.files
-TAMM.includes
-TAMM.creator
-TAMM.creator.user
-*.autosave
+from chemist import Atom, Molecule, ChemicalSystem
 
-#These are configuration files for CLion
-.idea/
 
-#These are configuration files for VS code
-.vscode/
+def make_h2():
+    mol = Molecule()
+    mol.push_back(Atom('H', 1, 1837.15264648179, 0.0, 0.0, 0.0))
+    mol.push_back(Atom('H', 1, 1837.15264648179, 0.0, 0.0, 1.68185))
 
-#This is the documentation build directory
-
-#These are common build directory names
-Debug/
-Release/
-cmake-build-debug/
-cmake-build-release/
-build/
-debug*
-build*
-
-#editor backups
-*~
+    return ChemicalSystem(mol)

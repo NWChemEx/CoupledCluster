@@ -14,5 +14,5 @@
   ~ limitations under the License.
 -->
 
-# CoupledCluster
-Implements methods belonging to the coupled cluster hierarchy
+General instructions for building documentation found throughout the NWChemEx project are available at:
+https://github.com/NWChemEx/NWChemEx/blob/master/docs/README.md

@@ -11,31 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-#These are configuration files for QtCreator
-TAMM.config
-TAMM.files
-TAMM.includes
-TAMM.creator
-TAMM.creator.user
-*.autosave
+name: .github Merge Workflow
 
-#These are configuration files for CLion
-.idea/
+on:
+  push:
+    branches:
+      - master
 
-#These are configuration files for VS code
-.vscode/
-
-#This is the documentation build directory
-
-#These are common build directory names
-Debug/
-Release/
-cmake-build-debug/
-cmake-build-release/
-build/
-debug*
-build*
-
-#editor backups
-*~
+jobs:
+  Common-Merge:
+    uses: NWChemEx/.github/.github/workflows/common_merge.yaml@master
+    with:
+      doc_target: 'coupledcluster_cxx_api'
+      generate_module_docs: true
+    secrets: inherit
