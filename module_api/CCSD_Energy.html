@@ -1,0 +1,1109 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CCSD Energy &mdash; SCF v0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=2fea6348"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Modules API" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">APIs:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Modules API</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">CCSD Energy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#please-cite">Please Cite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#property-types">Property Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-inputs">Module Inputs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quick-reference">Quick Reference</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#detailed-descriptions">Detailed Descriptions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-results">Module Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://nwchemex.github.io/CoupledCluster/coupledcluster_cxx_api/index.html">C++ API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SCF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Modules API</a></li>
+      <li class="breadcrumb-item active">CCSD Energy</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/module_api/CCSD_Energy.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ccsd-energy">
+<h1>CCSD Energy<a class="headerlink" href="#ccsd-energy" title="Link to this heading"></a></h1>
+<p>No description provided</p>
+<section id="please-cite">
+<h2>Please Cite<a class="headerlink" href="#please-cite" title="Link to this heading"></a></h2>
+<p>No citations</p>
+</section>
+<section id="property-types">
+<h2>Property Types<a class="headerlink" href="#property-types" title="Link to this heading"></a></h2>
+<p>The following is a list of property types that this module satisfies.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">simde::AOEnergy</span></code></p></li>
+</ul>
+</section>
+<section id="module-inputs">
+<h2>Module Inputs<a class="headerlink" href="#module-inputs" title="Link to this heading"></a></h2>
+<p>This section details the full list of inputs that the module accepts. Inputs
+that are not listed as optional must have their value set before the module can
+be run. Inputs can be set manually by calling the module’s <code class="docutils literal notranslate"><span class="pre">change_input</span></code>
+function or by passing arguments to a property type.</p>
+<section id="quick-reference">
+<h3>Quick Reference<a class="headerlink" href="#quick-reference" title="Link to this heading"></a></h3>
+<p>The following table provides a quick summary of the inputs available to this
+module. The columns are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Key</span></code>: The key used to retrieve the option,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Default</span></code> : The initial value, if one exists, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Description</span></code> : A human readable description of what the option is used for.</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>AOs</p></td>
+<td><p>N/A</p></td>
+<td><p>The atomic orbital basis set</p></td>
+</tr>
+<tr class="row-odd"><td><p>balance_tiles</p></td>
+<td><p>1</p></td>
+<td><p>Balanced tiling scheme, determined automatically based on CC module being run</p></td>
+</tr>
+<tr class="row-even"><td><p>cache_size</p></td>
+<td><p>8</p></td>
+<td><p>cache size for (T)</p></td>
+</tr>
+<tr class="row-odd"><td><p>ccsd_maxiter</p></td>
+<td><p>50</p></td>
+<td><p>Maximum number of iterations</p></td>
+</tr>
+<tr class="row-even"><td><p>ccsdt_tilesize</p></td>
+<td><p>32</p></td>
+<td><p>MO tilesize for (T)</p></td>
+</tr>
+<tr class="row-odd"><td><p>charge</p></td>
+<td><p>0</p></td>
+<td><p>Charge</p></td>
+</tr>
+<tr class="row-even"><td><p>Chemical System</p></td>
+<td><p>N/A</p></td>
+<td><p>N/A</p></td>
+</tr>
+<tr class="row-odd"><td><p>convd</p></td>
+<td><p>1e-06</p></td>
+<td><p>Specifies the density convergence threshold</p></td>
+</tr>
+<tr class="row-even"><td><p>conve</p></td>
+<td><p>1e-08</p></td>
+<td><p>Specifies the energy convergence threshold</p></td>
+</tr>
+<tr class="row-odd"><td><p>damp</p></td>
+<td><p>100</p></td>
+<td><p>percentage of the current iterations density mixed with the previous iterations density. 100% indicates no damping</p></td>
+</tr>
+<tr class="row-even"><td><p>debug</p></td>
+<td><p>0</p></td>
+<td><p>Debugging flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>diagtol</p></td>
+<td><p>1e-05</p></td>
+<td><p>Cholesky Decomposition Threshold</p></td>
+</tr>
+<tr class="row-even"><td><p>diis_hist</p></td>
+<td><p>10</p></td>
+<td><p>number of DIIS history entries to store for the fock and error matrices</p></td>
+</tr>
+<tr class="row-odd"><td><p>direct_df</p></td>
+<td><p>0</p></td>
+<td><p>Requests the direct computation of the density-fitted Coulomb contribution. Works only for pure Kohn-Sham fnctionals (no exact exchange)</p></td>
+</tr>
+<tr class="row-even"><td><p>freeze_core</p></td>
+<td><p>0</p></td>
+<td><p>Specify number of core orbitals to freeze</p></td>
+</tr>
+<tr class="row-odd"><td><p>freeze_virtual</p></td>
+<td><p>0</p></td>
+<td><p>Specify number of virtuals to freeze</p></td>
+</tr>
+<tr class="row-even"><td><p>lshift</p></td>
+<td><p>0</p></td>
+<td><p>Level Shift</p></td>
+</tr>
+<tr class="row-odd"><td><p>molecule_name</p></td>
+<td><p>N/A</p></td>
+<td><p>The name of the molecule</p></td>
+</tr>
+<tr class="row-even"><td><p>multiplicity</p></td>
+<td><p>1</p></td>
+<td><p>number of singly occupied orbitals for a particular calculation</p></td>
+</tr>
+<tr class="row-odd"><td><p>ndiis</p></td>
+<td><p>5</p></td>
+<td><p>number of diis entries</p></td>
+</tr>
+<tr class="row-even"><td><p>noscf</p></td>
+<td><p>0</p></td>
+<td><p>computes only the SCF energy upon restart</p></td>
+</tr>
+<tr class="row-odd"><td><p>profile_ccsd</p></td>
+<td><p>0</p></td>
+<td><p>Write profiling information to csv file</p></td>
+</tr>
+<tr class="row-even"><td><p>readt</p></td>
+<td><p>0</p></td>
+<td><p>Read Fock, 2e integral, T1, T2 amplitude tensors to disk. Not required when writet=true</p></td>
+</tr>
+<tr class="row-odd"><td><p>restart</p></td>
+<td><p>0</p></td>
+<td><p>indicates the calculation be restarted</p></td>
+</tr>
+<tr class="row-even"><td><p>scf_type</p></td>
+<td><p>restricted</p></td>
+<td><p>options supported are restricted and unrestricted</p></td>
+</tr>
+<tr class="row-odd"><td><p>snK</p></td>
+<td><p>0</p></td>
+<td><p>Computes the exact exchange contribution using the seminumerical approach implemented in GauXC</p></td>
+</tr>
+<tr class="row-even"><td><p>threshold</p></td>
+<td><p>1e-06</p></td>
+<td><p>CCSD Threshold</p></td>
+</tr>
+<tr class="row-odd"><td><p>tilesize</p></td>
+<td><p>40</p></td>
+<td><p>Tilesize for the MO space. Will be set automatically unless explicitly specified</p></td>
+</tr>
+<tr class="row-even"><td><p>tol_int</p></td>
+<td><p>1e-22</p></td>
+<td><p>integral primitive screening threshold</p></td>
+</tr>
+<tr class="row-odd"><td><p>tol_lindep</p></td>
+<td><p>1e-05</p></td>
+<td><p>Tolerance for detecting the linear dependence of basis set</p></td>
+</tr>
+<tr class="row-even"><td><p>tol_sch</p></td>
+<td><p>1e-10</p></td>
+<td><p>The Schwarz inequality is used to screen the product of integrals and density matrices</p></td>
+</tr>
+<tr class="row-odd"><td><p>units</p></td>
+<td><p>angstrom</p></td>
+<td><p>Specifies the units as bohr or angstrom</p></td>
+</tr>
+<tr class="row-even"><td><p>writem</p></td>
+<td><p>1</p></td>
+<td><p>An integer specifying the frequency (as number of iterations) after which the movecs and density matrices are written to disk for restarting the calculation</p></td>
+</tr>
+<tr class="row-odd"><td><p>writet</p></td>
+<td><p>0</p></td>
+<td><p>Write Fock, 2e integral, T1, T2 amplitude tensors to disk</p></td>
+</tr>
+<tr class="row-even"><td><p>writet_iter</p></td>
+<td><p>5</p></td>
+<td><p>Write Fock, 2e integral, T1, T2 amplitude tensors to disk after every 5 iterations</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_basis_tol</p></td>
+<td><p>1e-10</p></td>
+<td><p>Specifies the GauXC basis tolerance</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_batch_size</p></td>
+<td><p>2048</p></td>
+<td><p>Specifies the GauXC batch size</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_exec_space</p></td>
+<td><p>Host</p></td>
+<td><p>Specifies the GauXC execution space (Host or Device) for the load balancer and integrator</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_grid_type</p></td>
+<td><p>UltraFine</p></td>
+<td><p>Specifies the quality of the numerical integration grid</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_int_kernel</p></td>
+<td><p>Default</p></td>
+<td><p>Specifies the GauXC Integrator Kernel</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_lb_kernel</p></td>
+<td><p>Default</p></td>
+<td><p>Specifies the GauXC Load Balancer Kernel</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_lwd_kernel</p></td>
+<td><p>Default</p></td>
+<td><p>Specifies the GauXC Local Work Driver Kernel</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_mw_kernel</p></td>
+<td><p>Default</p></td>
+<td><p>Specifies the GauXC Molecular Weights Kernel</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_pruning_scheme</p></td>
+<td><p>Robust</p></td>
+<td><p>GauXC pruning scheme. Options supported are Robust, Treutler, Unpruned</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_rad_quad</p></td>
+<td><p>MK</p></td>
+<td><p>Specifies the GauXC radial quadrature. Options are MK,TA,MHL</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_red_kernel</p></td>
+<td><p>Default</p></td>
+<td><p>Specifies the GauXC Reduction Kernel</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_snK_etol</p></td>
+<td><p>1e-10</p></td>
+<td><p>snK energy tolerance. If conve &lt; xc_snK_etol, this tolerance will be automatically set to the conve value</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_snK_ktol</p></td>
+<td><p>1e-10</p></td>
+<td><p>K matrix tolerance. If conve * 1e-2 &lt; xc_snK_ktol, this tolerance will be automatically set to conve * 1e-2</p></td>
+</tr>
+<tr class="row-even"><td><p>xc_type</p></td>
+<td><p>[]</p></td>
+<td><p>A list of strings specifying the exchange and correlation functionals for DFT calculations</p></td>
+</tr>
+<tr class="row-odd"><td><p>xc_weight_scheme</p></td>
+<td><p>SSF</p></td>
+<td><p>Specifies the GauXC partitioning scheme. Can be SSF, Becke, LKO</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="detailed-descriptions">
+<h3>Detailed Descriptions<a class="headerlink" href="#detailed-descriptions" title="Link to this heading"></a></h3>
+<p>The following subsections provide detailed descriptions of each input recognized
+by this module. The subsection headings are the name of the input. Within each
+subsection we list:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Description</span></code> : A human readable description of what the option is used for.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Default</span> <span class="pre">Value</span></code> : The initial value, if one exists.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Optional?</span></code> : Whether the value must be set inorder for the module to run.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Opaque?</span></code> : Does the value of the input influence memoization?.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Domain</span> <span class="pre">Restrictions</span></code> : Criteria a value must obey to be deemed valid.</p></li>
+</ul>
+<section id="aos">
+<h4>AOs<a class="headerlink" href="#aos" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : The atomic orbital basis set</p></li>
+<li><p>Default Value : N/A</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == chemist::basis_set::AOBasisSet&lt;chemist::basis_set::AtomicBasisSet&lt;chemist::basis_set::Shell&lt;chemist::basis_set::ContractedGaussian&lt;chemist::basis_set::Primitive&lt;double&gt;&gt;&gt;&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="balance-tiles">
+<h4>balance_tiles<a class="headerlink" href="#balance-tiles" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Balanced tiling scheme, determined automatically based on CC module being run</p></li>
+<li><p>Default Value : 1</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="cache-size">
+<h4>cache_size<a class="headerlink" href="#cache-size" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : cache size for (T)</p></li>
+<li><p>Default Value : 8</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="ccsd-maxiter">
+<h4>ccsd_maxiter<a class="headerlink" href="#ccsd-maxiter" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Maximum number of iterations</p></li>
+<li><p>Default Value : 50</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="ccsdt-tilesize">
+<h4>ccsdt_tilesize<a class="headerlink" href="#ccsdt-tilesize" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : MO tilesize for (T)</p></li>
+<li><p>Default Value : 32</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="charge">
+<h4>charge<a class="headerlink" href="#charge" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Charge</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="chemical-system">
+<h4>Chemical System<a class="headerlink" href="#chemical-system" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : N/A</p></li>
+<li><p>Default Value : N/A</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == chemist::ChemicalSystem</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="convd">
+<h4>convd<a class="headerlink" href="#convd" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the density convergence threshold</p></li>
+<li><p>Default Value : 1e-06</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="conve">
+<h4>conve<a class="headerlink" href="#conve" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the energy convergence threshold</p></li>
+<li><p>Default Value : 1e-08</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="damp">
+<h4>damp<a class="headerlink" href="#damp" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : percentage of the current iterations density mixed with the previous iterations density. 100% indicates no damping</p></li>
+<li><p>Default Value : 100</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="debug">
+<h4>debug<a class="headerlink" href="#debug" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Debugging flag</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="diagtol">
+<h4>diagtol<a class="headerlink" href="#diagtol" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Cholesky Decomposition Threshold</p></li>
+<li><p>Default Value : 1e-05</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="diis-hist">
+<h4>diis_hist<a class="headerlink" href="#diis-hist" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : number of DIIS history entries to store for the fock and error matrices</p></li>
+<li><p>Default Value : 10</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="direct-df">
+<h4>direct_df<a class="headerlink" href="#direct-df" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Requests the direct computation of the density-fitted Coulomb contribution. Works only for pure Kohn-Sham fnctionals (no exact exchange)</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="freeze-core">
+<h4>freeze_core<a class="headerlink" href="#freeze-core" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specify number of core orbitals to freeze</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="freeze-virtual">
+<h4>freeze_virtual<a class="headerlink" href="#freeze-virtual" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specify number of virtuals to freeze</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="lshift">
+<h4>lshift<a class="headerlink" href="#lshift" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Level Shift</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="molecule-name">
+<h4>molecule_name<a class="headerlink" href="#molecule-name" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : The name of the molecule</p></li>
+<li><p>Default Value : N/A</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="multiplicity">
+<h4>multiplicity<a class="headerlink" href="#multiplicity" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : number of singly occupied orbitals for a particular calculation</p></li>
+<li><p>Default Value : 1</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="ndiis">
+<h4>ndiis<a class="headerlink" href="#ndiis" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : number of diis entries</p></li>
+<li><p>Default Value : 5</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="noscf">
+<h4>noscf<a class="headerlink" href="#noscf" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : computes only the SCF energy upon restart</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="profile-ccsd">
+<h4>profile_ccsd<a class="headerlink" href="#profile-ccsd" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Write profiling information to csv file</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="readt">
+<h4>readt<a class="headerlink" href="#readt" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Read Fock, 2e integral, T1, T2 amplitude tensors to disk. Not required when writet=true</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="restart">
+<h4>restart<a class="headerlink" href="#restart" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : indicates the calculation be restarted</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="scf-type">
+<h4>scf_type<a class="headerlink" href="#scf-type" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : options supported are restricted and unrestricted</p></li>
+<li><p>Default Value : restricted</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="snk">
+<h4>snK<a class="headerlink" href="#snk" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Computes the exact exchange contribution using the seminumerical approach implemented in GauXC</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="threshold">
+<h4>threshold<a class="headerlink" href="#threshold" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : CCSD Threshold</p></li>
+<li><p>Default Value : 1e-06</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="tilesize">
+<h4>tilesize<a class="headerlink" href="#tilesize" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Tilesize for the MO space. Will be set automatically unless explicitly specified</p></li>
+<li><p>Default Value : 40</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="tol-int">
+<h4>tol_int<a class="headerlink" href="#tol-int" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : integral primitive screening threshold</p></li>
+<li><p>Default Value : 1e-22</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="tol-lindep">
+<h4>tol_lindep<a class="headerlink" href="#tol-lindep" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Tolerance for detecting the linear dependence of basis set</p></li>
+<li><p>Default Value : 1e-05</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="tol-sch">
+<h4>tol_sch<a class="headerlink" href="#tol-sch" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : The Schwarz inequality is used to screen the product of integrals and density matrices</p></li>
+<li><p>Default Value : 1e-10</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="units">
+<h4>units<a class="headerlink" href="#units" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the units as bohr or angstrom</p></li>
+<li><p>Default Value : angstrom</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="writem">
+<h4>writem<a class="headerlink" href="#writem" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : An integer specifying the frequency (as number of iterations) after which the movecs and density matrices are written to disk for restarting the calculation</p></li>
+<li><p>Default Value : 1</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="writet">
+<h4>writet<a class="headerlink" href="#writet" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Write Fock, 2e integral, T1, T2 amplitude tensors to disk</p></li>
+<li><p>Default Value : 0</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == bool</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="writet-iter">
+<h4>writet_iter<a class="headerlink" href="#writet-iter" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Write Fock, 2e integral, T1, T2 amplitude tensors to disk after every 5 iterations</p></li>
+<li><p>Default Value : 5</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-basis-tol">
+<h4>xc_basis_tol<a class="headerlink" href="#xc-basis-tol" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC basis tolerance</p></li>
+<li><p>Default Value : 1e-10</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-batch-size">
+<h4>xc_batch_size<a class="headerlink" href="#xc-batch-size" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC batch size</p></li>
+<li><p>Default Value : 2048</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == int</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-exec-space">
+<h4>xc_exec_space<a class="headerlink" href="#xc-exec-space" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC execution space (Host or Device) for the load balancer and integrator</p></li>
+<li><p>Default Value : Host</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-grid-type">
+<h4>xc_grid_type<a class="headerlink" href="#xc-grid-type" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the quality of the numerical integration grid</p></li>
+<li><p>Default Value : UltraFine</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-int-kernel">
+<h4>xc_int_kernel<a class="headerlink" href="#xc-int-kernel" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC Integrator Kernel</p></li>
+<li><p>Default Value : Default</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-lb-kernel">
+<h4>xc_lb_kernel<a class="headerlink" href="#xc-lb-kernel" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC Load Balancer Kernel</p></li>
+<li><p>Default Value : Default</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-lwd-kernel">
+<h4>xc_lwd_kernel<a class="headerlink" href="#xc-lwd-kernel" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC Local Work Driver Kernel</p></li>
+<li><p>Default Value : Default</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-mw-kernel">
+<h4>xc_mw_kernel<a class="headerlink" href="#xc-mw-kernel" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC Molecular Weights Kernel</p></li>
+<li><p>Default Value : Default</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-pruning-scheme">
+<h4>xc_pruning_scheme<a class="headerlink" href="#xc-pruning-scheme" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : GauXC pruning scheme. Options supported are Robust, Treutler, Unpruned</p></li>
+<li><p>Default Value : Robust</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-rad-quad">
+<h4>xc_rad_quad<a class="headerlink" href="#xc-rad-quad" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC radial quadrature. Options are MK,TA,MHL</p></li>
+<li><p>Default Value : MK</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-red-kernel">
+<h4>xc_red_kernel<a class="headerlink" href="#xc-red-kernel" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC Reduction Kernel</p></li>
+<li><p>Default Value : Default</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-snk-etol">
+<h4>xc_snK_etol<a class="headerlink" href="#xc-snk-etol" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : snK energy tolerance. If conve &lt; xc_snK_etol, this tolerance will be automatically set to the conve value</p></li>
+<li><p>Default Value : 1e-10</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-snk-ktol">
+<h4>xc_snK_ktol<a class="headerlink" href="#xc-snk-ktol" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : K matrix tolerance. If conve * 1e-2 &lt; xc_snK_ktol, this tolerance will be automatically set to conve * 1e-2</p></li>
+<li><p>Default Value : 1e-10</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == double</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-type">
+<h4>xc_type<a class="headerlink" href="#xc-type" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : A list of strings specifying the exchange and correlation functionals for DFT calculations</p></li>
+<li><p>Default Value : []</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="xc-weight-scheme">
+<h4>xc_weight_scheme<a class="headerlink" href="#xc-weight-scheme" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Description : Specifies the GauXC partitioning scheme. Can be SSF, Becke, LKO</p></li>
+<li><p>Default Value : SSF</p></li>
+<li><p>Optional? : False</p></li>
+<li><p>Opaque? : True</p></li>
+<li><p>Domain Restrictions :</p>
+<ul>
+<li><p>Type == std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;&gt;</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+</section>
+<section id="module-results">
+<h2>Module Results<a class="headerlink" href="#module-results" title="Link to this heading"></a></h2>
+<p>This section tabulates the full list of results that the module returns. The
+columns respectively are:</p>
+<ul class="simple">
+<li><p>Key: What the result is called</p></li>
+<li><p>Type: The C++ type of the result</p></li>
+<li><p>Description: What the result is/how it was computed.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A given property type will only return a subset of the available results.
+Additional results can be accessed by using other property types or by using
+the Module class’s advanced API.</p>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Energy</p></td>
+<td><p>double</p></td>
+<td><p>N/A</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+<p>The module defines no submodules.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Modules API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NWChemEx Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
